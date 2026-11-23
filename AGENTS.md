@@ -27,6 +27,9 @@ Other top-level files: `scripts/check-package.mjs` (installs the packed archive 
 project and runs every command; plain JavaScript so it runs on the minimum Node.js), and
 `.github/` (workflows `ci.yml`, `docs.yml` - GitHub Pages -, `release.yml` - npm publication on
 `vX.Y.Z` tags with Trusted Publishing -, Dependabot, issue and pull request templates).
+Agent skills shared with the repository live in `.claude/skills/` (Claude Code) and
+`.agents/skills/` (Codex): `commit-message` drafts Conventional Commit messages with a feature
+scope. Keep the two `SKILL.md` copies identical.
 
 ## Principles (do not break them)
 

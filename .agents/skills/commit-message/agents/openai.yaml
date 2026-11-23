@@ -1,0 +1,3 @@
+interface:
+  display_name: "Commit Message"
+  short_description: "Draft Conventional Commit messages with a feature scope"
