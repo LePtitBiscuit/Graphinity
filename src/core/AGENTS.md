@@ -8,7 +8,7 @@ entry (`graphinity`). Read the [root guide](../../AGENTS.md) first.
 
 | File        | Role |
 | ----------- | ---- |
-| `index.ts`  | Public API: `loadArchitecture`, `buildViewerData`, `formatConfigError`, constants and types. Anything exported here is public: document it in README › *Programmatic API*. |
+| `index.ts`  | Public API: `loadArchitecture`, `buildViewerData`, `formatConfigError`, constants and types. Anything exported here is public: document it in `docs/reference/api.md`. |
 | `types.ts`  | The normalized model (`Architecture`, `Universe`, `ArchitectureNode`, `ArchitectureGroup`, `NodeTag`, `IconRef`…) and `ConfigError`. **No Node imports**: the viewer imports it. |
 | `parse.ts`  | Text → data (YAML or JSON) with positions for error reporting. Rejects YAML tags, duplicate keys, multiple documents; limits alias expansion. |
 | `schema.ts` | Validation of **one** universe file: known fields only, types, lengths, ids, references inside the file (connections, groups, tags, placement hints: `checkPlacement` checks that `after` names another node of the universe and that hints form no loop; `readNode` keeps one hint per node, `place` or `after`). Returns raw values (paths unresolved) and issues with field paths. |
@@ -64,7 +64,8 @@ a collection that is not on Iconify, or to bundle one (offline).
    name syntax for it) and the provider to `defaultIconProviders()` (before the `*` provider)
    with its attribution; ship its license text in `licenses/` when its license requires it.
 3. Tests in `tests/core/icons/` (found, missing, duplicates, unsafe SVG), and the documentation:
-   `docs/config/icons.md` (syntax, collection, license and redistribution), README › *Icons*.
+   `docs/config/icons.md` (syntax, collection, license and redistribution), and the license
+   paragraph of the README if the collection is bundled.
 
 ## Adding a configuration field (checklist)
 
@@ -75,7 +76,8 @@ a collection that is not on Iconify, or to bundle one (offline).
 5. Viewer: use it (see [`viewer/AGENTS.md`](../../viewer/AGENTS.md)).
 6. Tests: `tests/core/schema.test.ts` (valid and invalid values, messages), `load.test.ts`
    (normalized output, positions), layout/e2e if it changes the drawing.
-7. **README**: the reference table of the object, *Limits*, *Validation rules*, an example - and
+7. **Documentation**: the object's page in `docs/config/` (table and example),
+   `docs/config/validation.md` (rules and limits), `docs/config/index.md` (property list) - and
    the example project if it helps.
 
 ## Connections to groups

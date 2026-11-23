@@ -1,6 +1,7 @@
 # AGENTS.md - examples
 
-Example projects, described for users in [`README.md`](README.md). Read the
+Example projects, described for users in [`README.md`](README.md) and the documentation's
+[live demo](../docs/guide/demo.md) page. Read the
 [root guide](../AGENTS.md) first.
 
 ## kestrel
@@ -41,4 +42,5 @@ group and the `platform` node), downloaded from the Iconify API on the first bui
   `tests/core/load.test.ts`, `e2e/navigation.spec.ts`): assert on stable facts only (the
   universes, the links between them), and build dedicated fixtures for anything more precise.
 - When a feature is added, show it here if it helps understanding, then update the file tree and
-  the role of each file in the main README › *Organising the files*, and `examples/README.md`.
+  the role of each file in `docs/guide/demo.md` (and `docs/concepts/file-structure.md` for the
+  tree), and `examples/README.md`.

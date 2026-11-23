@@ -55,7 +55,8 @@ Configuration files are treated as **untrusted data**:
 - **Downloads are data only.** Icons of Iconify collections that are not bundled come from the
   official Iconify API hosts only, as JSON icon data checked field by field; Dashboard Icons are
   SVG files from the collection's repository, pinned to one commit. Everything is validated and
-  cached, at build time only. No code is downloaded or executed.
+  cached, at build time only. Requests are limited in number, time out and never follow
+  redirects. No code is downloaded or executed.
 - **Confined file access.** Paths must be relative. They are checked to stay inside the project
   directory *before* the disk is touched, then again after resolving symbolic links. Only files
   with an expected extension are read.

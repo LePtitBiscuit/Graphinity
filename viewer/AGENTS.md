@@ -97,4 +97,4 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
 
 `tests/viewer/` (layout, flow, route, navigation, colors) run in Node; `e2e/navigation.spec.ts` drives the
 built viewer through the CLI dev server in Chrome. When the drawing or an interaction changes,
-update both and README › *Layout* / *Using the viewer*.
+update both and `docs/concepts/layout.md` / `docs/reference/viewer.md`.

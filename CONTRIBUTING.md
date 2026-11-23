@@ -50,8 +50,8 @@ on every pull request, on Node.js 22, 24 and 26.
 
 - Keep each pull request focused on one change; do not mix refactoring with behaviour changes.
 - **Update the documentation in the same pull request** as any change a user can notice: the
-  documentation site (`docs/`), `README.md`, and the relevant `AGENTS.md` (see the table in
-  `AGENTS.md`). Every YAML/JSON example must be valid (`pnpm docs:check`).
+  documentation site (`docs/`), the relevant `AGENTS.md`, and `README.md` when what it shows
+  changes (it is a short overview: see the table in `AGENTS.md`). Every YAML/JSON example must be valid (`pnpm docs:check`).
 - Add or update tests next to the behaviour (`tests/` mirrors `src/` and `viewer/src/`). Build
   test fixtures with `tests/helpers.ts` instead of relying on `examples/`.
 - Code, comments and messages are in English. TypeScript stays on 6.x (`vue-tsc` requirement).

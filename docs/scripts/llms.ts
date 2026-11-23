@@ -142,6 +142,23 @@ function summary(markdown: string): string {
   return line.length > 180 ? `${line.slice(0, 177).replace(/\s+\S*$/, '')}...` : line
 }
 
+/**
+ * The pages to read first, listed at the top of llms.txt (source file -> what an agent finds
+ * there). Each must be a published page (checked by tests/docs/llms.test.ts).
+ */
+export const KEY_PAGES: readonly (readonly [file: string, about: string])[] = [
+  ['config/index.md', 'the configuration schema: every object and its properties, the general rules (unknown properties, ids, paths) and a minimal file'],
+  ['config/universe.md', 'the top level of every file'],
+  ['config/node.md', 'nodes, and the `universe` field that opens another file'],
+  ['config/group.md', 'groups that frame nodes, and nested groups'],
+  ['config/connection.md', 'connections between nodes and groups, sides, and paths into sub-universes'],
+  ['concepts/sub-universes.md', 'how files reference each other, paths, sharing and cycles'],
+  ['config/validation.md', 'every validation rule and limit'],
+  ['cli/index.md', 'the commands (`init`, `dev`, `validate`, `build`), options and exit codes'],
+  ['cli/errors.md', 'common error messages and how to fix them'],
+  ['config/examples.md', 'complete examples, validated against the engine on every build'],
+]
+
 export interface LlmFiles {
   /** Output path relative to the site root -> content. */
   files: Map<string, string>
@@ -159,6 +176,16 @@ export async function buildLlmFiles(docsDir: string, siteUrl: string, descriptio
     `> ${description}`,
     '',
     `Graphinity turns YAML or JSON files into interactive, recursive architecture diagrams: each file is a universe, and a node can open another one. This index lists every page of the documentation as Markdown; the whole documentation is also in one file: ${site}llms-full.txt`,
+    '',
+    'To write or fix configuration files, read the pages below first, then check the files with `npx graphinity validate <file>` (every error is reported with its file, line and field).',
+    '',
+    '## Start here',
+    '',
+    ...KEY_PAGES.map(([file, about]) => {
+      const page = pages.find((candidate) => candidate.file === file)
+      const title = page?.section ? `${page.section}: ${page.title}` : (page?.title ?? file)
+      return `- [${title}](${site}${file}): ${about}`
+    }),
   ]
   const full: string[] = [`# Graphinity documentation\n\n> ${description}\n\nSource: ${site}\n`]
   let section: string | undefined = '\u0000'

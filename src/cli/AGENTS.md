@@ -23,15 +23,15 @@ first.
   `assets/` (the viewer), `architecture.json` (`ViewerData`), `files/<project-relative path>` (local
   images), `icons/` (the `files` of the `ViewerBundle`: SVG icons of collections,
   `ATTRIBUTIONS.md`, `licenses/`; served from memory by `dev`). `dev` adds a `<meta name="graphinity:live">` pointing to `__events`. Changing
-  this layout means changing `viewer/src/App.vue` and README › *Deployment*.
+  this layout means changing `viewer/src/App.vue` and `docs/cli/build.md`.
 - **Exit codes**: `0` success, `1` invalid configuration or failure (including `init` keeping
   existing files: declined, or not a terminal without `--force`), `2` usage error.
 - **Options** are declared once in `parseArgs` and allowed per command in `COMMAND_OPTIONS`
   (`init`: `force`; `dev`: `port`, `open`, `project`; `validate`: `project`; `build`: `out`,
   `project`). `--help`/`-h` and `--version`/`-v` work everywhere. Keep `COMMANDS` in `help.ts`
   (usage, arguments, options, examples, documentation page) in sync with `COMMAND_OPTIONS`, and
-  both with README › *Commands* and `docs/cli/` (the help outputs shown there are copied from the
-  real CLI).
+  both with `docs/cli/` (the help outputs shown there are copied from the real CLI) and the
+  table of README › *Commands*.
 - **`init` writes** `architecture.yml`, `universes/example.yml` (the content of `starterFiles()`,
   copied in `docs/cli/init.md`) and the folders `universes/`, `assets/icons/`. The starter files
   use only bundled icons (Simple Icons names): they must validate offline.

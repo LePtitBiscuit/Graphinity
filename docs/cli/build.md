@@ -66,7 +66,7 @@ If the configuration has errors, they are printed (exit code `1`) and nothing is
 `graphinity build --help` prints:
 
 ```
-Graphinity 0.1.0 - Interactive nested architecture diagrams
+Graphinity 0.1.1 - Interactive nested architecture diagrams
 
 Usage: graphinity build <file> [options]
 

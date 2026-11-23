@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { buildLlmFiles, docPages, toMarkdown } from '../../docs/scripts/llms.ts'
+import { buildLlmFiles, docPages, KEY_PAGES, toMarkdown } from '../../docs/scripts/llms.ts'
 
 const docsDir = fileURLToPath(new URL('../../docs/', import.meta.url))
 const site = 'https://example.github.io/Graphinity/'
@@ -99,6 +99,18 @@ describe('the LLM files of the documentation', async () => {
     for (const page of pages) expect(index).toContain(`(${site}${page.file})`)
     expect(index).toContain('## Configuration')
     expect(index).toContain(`[Full documentation](${site}llms-full.txt)`)
+  })
+
+  it('list the pages to read first at the top of llms.txt, all published', () => {
+    const index = files.get('llms.txt')!
+    const start = index.indexOf('## Start here')
+    expect(start).toBeGreaterThan(0)
+    expect(start).toBeLessThan(index.indexOf('## Overview'))
+    for (const [file] of KEY_PAGES) {
+      expect(pages.map((page) => page.file), file).toContain(file)
+      expect(index.slice(start, index.indexOf('## Overview'))).toContain(`(${site}${file})`)
+    }
+    expect(index).toContain(`[Configuration: Overview](${site}config/index.md)`)
   })
 
   it('put every page in llms-full.txt, in reading order', () => {

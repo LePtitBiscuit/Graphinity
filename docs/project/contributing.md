@@ -74,7 +74,8 @@ installed package on Node.js 22.4 (the minimum), 22, 24 and 26.
 - **Files are the only source of truth**: the viewer stays read-only (no editing interface, no
   backend), generated sites never use the network, and configuration files are untrusted input.
 - **Update the documentation in the same pull request** as any change a user can notice: this
-  site, the `README.md` and the relevant `AGENTS.md`. Complete examples are validated by
+  site, the relevant `AGENTS.md`, and the `README.md` when what it shows changes (it is a short
+  overview that links here). Complete examples are validated by
   `pnpm docs:check`.
 - Add tests next to the behaviour, and keep each pull request focused.
 - Report security problems privately: see the repository's

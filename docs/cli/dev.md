@@ -14,7 +14,7 @@ npx graphinity dev architecture.yml
 ```
 10:42:07 ✓ 3 universes, 12 nodes, 8 connections
 
-  Graphinity 0.1.0  http://127.0.0.1:4321/
+  Graphinity 0.1.1  http://127.0.0.1:4321/
   Watching architecture.yml and the files it references. Ctrl+C to stop.
 ```
 
@@ -84,7 +84,7 @@ Stop it with `Ctrl+C`.
 `graphinity dev --help` prints:
 
 ```
-Graphinity 0.1.0 - Interactive nested architecture diagrams
+Graphinity 0.1.1 - Interactive nested architecture diagrams
 
 Usage: graphinity dev <file> [options]
 

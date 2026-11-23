@@ -85,7 +85,7 @@ Rules:
 - `feat`: a new configuration field or value, a new viewer interaction, a new CLI option.
 - `fix`: wrong behaviour, a misleading error message, a layout or routing defect.
 - `perf`: layout, routing or build speed, without changing the result.
-- `security`: the rules of `README.md` › *Security* (untrusted configuration, file access,
+- `security`: the rules of `docs/reference/engine.md` › *Security* (untrusted configuration, file access,
   icon downloads, markup injection).
 - `style`: visual changes of the viewer without new behaviour (spacing, colors of the UI);
   not code formatting alone, which is `chore`.

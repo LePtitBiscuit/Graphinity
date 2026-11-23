@@ -58,7 +58,7 @@ npx graphinity validate docs/architecture/architecture.yml
 `graphinity validate --help` prints:
 
 ```
-Graphinity 0.1.0 - Interactive nested architecture diagrams
+Graphinity 0.1.1 - Interactive nested architecture diagrams
 
 Usage: graphinity validate <file> [options]
 

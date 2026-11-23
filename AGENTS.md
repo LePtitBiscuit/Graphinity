@@ -20,7 +20,7 @@ Each file is a *universe* (nodes, groups, connections); a node can open another 
 viewer lays each universe out with ELK and shows one universe at a time.
 
 User documentation: the documentation site in [`docs/`](docs/AGENTS.md) (the reference), and
-[`README.md`](README.md) (overview for the npm page). Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md);
+[`README.md`](README.md) (a short overview for the npm page, linking to the site). Contributors: [`CONTRIBUTING.md`](CONTRIBUTING.md);
 vulnerability reports: [`SECURITY.md`](SECURITY.md). License: MPL-2.0 ([`LICENSE`](LICENSE)).
 
 Other top-level files: `scripts/check-package.mjs` (installs the packed archive in a temporary
@@ -49,21 +49,25 @@ scope. Keep the two `SKILL.md` copies identical.
 
 ## Documentation rule (mandatory)
 
-**Every change that a user can notice updates the documentation in the same change: the
-documentation site (`docs/`, see its [`AGENTS.md`](docs/AGENTS.md) for which page covers what)
-and the README.** Before finishing, check each line below against your change:
+**Every change that a user can notice updates the documentation in the same change.** The
+documentation site (`docs/`) is the reference: its [`AGENTS.md`](docs/AGENTS.md) says which page
+covers what. The README is a short overview for the npm and GitHub pages (capabilities,
+installation, a minimal example, the commands, links to the site): keep it short, link to the
+site instead of copying it. Before finishing, check each line below against your change:
 
 | If you change…                                             | Update |
 | ---------------------------------------------------------- | ------ |
-| A configuration field, its type, default or constraints    | README › *Configuration reference* (the table of the object, and *Limits*), with a YAML example. |
-| How files are linked or resolved (paths, projects, cycles) | README › *Principle* and *Organising the files*. |
-| A validation rule or an error message                      | README › *Validation rules* (and the sample output if it changed). |
-| Placement, routing, node or group appearance               | README › *Layout* (and the node drawing in *Node*). |
-| A viewer interaction                                       | README › *Using the viewer*. |
-| A CLI command, option, output, exit code or the site layout | README › *Commands* / *Deployment*. |
-| The public API (`src/core/index.ts`)                       | README › *Programmatic API*. |
-| Security behaviour                                         | README › *Security*. |
-| The example files                                          | README › *Organising the files* (the file tree and the role of each file), and `examples/README.md`. |
+| A configuration field, its type, default or constraints    | `docs/config/` (the object's page, *Validation and limits*, the overview's property list), with a YAML example. |
+| How files are linked or resolved (paths, projects, cycles) | `docs/concepts/sub-universes.md`, `docs/concepts/file-structure.md`. |
+| A validation rule or an error message                      | `docs/config/validation.md`, `docs/cli/errors.md`. |
+| Placement, routing, node or group appearance               | `docs/concepts/layout.md`, the object's page in `docs/config/`. |
+| A viewer interaction                                       | `docs/reference/viewer.md`, `docs/guides/local-preview.md`. |
+| A CLI command, option, output, exit code or the site layout | `docs/cli/`, and README › *Commands* (the table of commands and main options). |
+| The public API (`src/core/index.ts`)                       | `docs/reference/api.md`. |
+| Security behaviour                                         | `docs/reference/engine.md` › *Security*. |
+| The example files                                          | `docs/guide/demo.md`, `docs/concepts/file-structure.md`, `examples/README.md`. |
+| A main capability, installation, requirements, the quick start | README (and `docs/guide/`). |
+| A documentation page (added, renamed, removed)             | `docs/.vitepress/sidebar.ts`, README › *Documentation*, the *Start here* list of `docs/scripts/llms.ts` if it is one of its pages. |
 | The structure or rules of a folder                         | That folder's `AGENTS.md` (and this file if the table above changes). |
 
 Every YAML/JSON snippet must be valid: `pnpm docs:check` validates the examples of the

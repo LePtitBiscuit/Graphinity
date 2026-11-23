@@ -28,7 +28,7 @@ pnpm check:package      # build, pack, install with production dependencies only
 `pnpm check:package` installs the archive into an empty temporary project
 (`npm install --omit=dev`), then runs `graphinity --version`, `--help`, `validate` on a valid and
 an invalid project, `build`, and `dev` (it fetches the served pages, then stops the server). It
-can also check an existing archive: `node scripts/check-package.mjs graphinity-0.1.0.tgz`.
+can also check an existing archive: `node scripts/check-package.mjs graphinity-<version>.tgz`.
 
 ## Continuous integration
 

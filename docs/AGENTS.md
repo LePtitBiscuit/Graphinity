@@ -21,7 +21,7 @@ Deployed to GitHub Pages from `main` by `.github/workflows/docs.yml`. Read the [
 | `.vitepress/theme/` | Default theme + `custom.css` (brand colors from the logo: violet to pink, screenshot and demo frame styles). |
 | `public/` | `logo.svg` and `favicon.svg` (generated from `brand/logo.html` by `pnpm brand`, do not edit), `images/` (screenshots of the viewer). `public/demo/` is generated, not committed. Nothing in `public/` is a page (`srcExclude`): its Markdown files (the demo's `ATTRIBUTIONS.md`) are copied as they are. |
 | `scripts/check-examples.ts` | Validates every complete example of the pages with the real engine. |
-| `scripts/llms.ts` | Generates `llms.txt`, `llms-full.txt` and `<page>.md` from the pages (tested in `tests/docs/llms.test.ts`). New VitePress syntax in a page (a container, a Vue snippet) must be converted there. |
+| `scripts/llms.ts` | Generates `llms.txt`, `llms-full.txt` and `<page>.md` from the pages (tested in `tests/docs/llms.test.ts`). `KEY_PAGES` is the *Start here* list at the top of `llms.txt`: the pages an agent reads first (configuration, validation, CLI, examples); keep it in sync when they are renamed. New VitePress syntax in a page (a container, a Vue snippet) must be converted there. |
 
 ## Commands
 
@@ -49,7 +49,8 @@ in `.vitepress/config.ts`, like the viewer's dev server in `vite.config.ts`.
   icon-sets.iconify.design. Use untitled blocks only for fragments.
 - **Keep the site in sync with the code.** When a configuration property, a validation rule, a
   CLI option or output, a viewer interaction or the public API changes, update the matching pages
-  (table below) in the same change, as well as the `README.md`.
+  (table below) in the same change. The README only gives an overview and links to these pages:
+  update it when what it shows changes (see the root guide).
 - Links between pages are absolute (`/config/node`) and checked by `vitepress build` (dead links
   fail the build). Anchors must match real headings.
 - Screenshots in `public/images/` come from the built demo (static site, served over HTTP);

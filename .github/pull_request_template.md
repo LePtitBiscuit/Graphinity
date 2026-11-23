@@ -6,5 +6,5 @@
 
 - [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm build` pass
 - [ ] `pnpm test:e2e` passes (viewer or CLI changes), and I looked at the viewer in a browser
-- [ ] Documentation updated for any visible change: `docs/`, `README.md`, the folder's `AGENTS.md` (`pnpm docs:build` passes)
+- [ ] Documentation updated for any visible change: `docs/`, the folder's `AGENTS.md`, `README.md` if what it shows changed (`pnpm docs:build` passes)
 - [ ] Tests added or updated next to the behaviour

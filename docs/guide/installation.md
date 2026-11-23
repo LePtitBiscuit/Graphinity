@@ -14,20 +14,20 @@ used, icons of the other [Iconify collections](/config/icons#any-iconify-collect
 
 ## Install the package
 
-::: warning Not yet published on npm
-`graphinity` is not published on the npm registry yet. Until it is, install it from a
-package archive built from the repository (see below). Once published, the usual commands will
-apply:
-
 ```sh
 npm install --save-dev graphinity
-npx graphinity init
 ```
-:::
+
+Or run it without installing, starting with a [starter project](/cli/init):
+
+```sh
+npx graphinity init
+npx graphinity dev architecture.yml
+```
 
 ### From a package archive
 
-Clone the [repository](https://github.com/LePtitBiscuit/Graphinity) and build the archive (this
+To try an unreleased version, clone the [repository](https://github.com/LePtitBiscuit/Graphinity) and build the archive (this
 builds the engine, the CLI and the viewer first). Building needs Node.js 22.18 or later and pnpm
 (see [Contributing](/project/contributing#requirements)):
 
@@ -41,7 +41,7 @@ npm pack
 This creates `graphinity-<version>.tgz`. Install it in your own project:
 
 ```sh
-npm install --save-dev /path/to/graphinity-0.1.0.tgz
+npm install --save-dev /path/to/graphinity-<version>.tgz
 npx graphinity --version
 ```
 
@@ -64,7 +64,7 @@ npx graphinity --help
 prints:
 
 ```
-Graphinity 0.1.0 - Interactive nested architecture diagrams
+Graphinity 0.1.1 - Interactive nested architecture diagrams
 
 Usage: graphinity <command> [options]
 

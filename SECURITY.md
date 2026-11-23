@@ -26,6 +26,7 @@ Graphinity treats configuration files as untrusted input. Reports are especially
   referenced by the architecture);
 - icon downloads at build time (allowed hosts, validation, cache).
 
-The security measures in place are described in the README › *Security* and in the documentation.
+The security measures in place are described in the documentation:
+[How the engine works › Security](https://leptitbiscuit.github.io/Graphinity/reference/engine#security).
 Vulnerabilities of development-only dependencies (Vite, VitePress, Playwright…) that do not reach
 the published package are handled through regular dependency updates.

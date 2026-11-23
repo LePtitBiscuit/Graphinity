@@ -7,12 +7,32 @@ index, the whole documentation in one file, and every page on its own.
 
 | URL | Content |
 | --- | ------- |
-| `/llms.txt` | An index of every page, by section, with a one-line summary and a link to its Markdown version ([llms.txt format](https://llmstxt.org)). |
+| `/llms.txt` | An index of every page, by section, with a one-line summary and a link to its Markdown version ([llms.txt format](https://llmstxt.org)). It starts with a *Start here* list: the pages to read first to write configuration files. |
 | `/llms-full.txt` | The whole documentation in one Markdown file, in reading order. Each page starts with a `Source:` line giving its URL. |
 | `/<page>.md` | One page in Markdown, next to its HTML page: `/config/node.md` for `/config/node`, `/cli/index.md` for `/cli/`. |
 
 Give an assistant the address of `llms.txt` and it can find the page it needs, or give it
 `llms-full.txt` to read everything at once.
+
+## For coding agents
+
+To write or fix configuration files, the *Start here* list of `llms.txt` points to:
+
+| Need | Page |
+| ---- | ---- |
+| Every object and its properties, the general rules | [Configuration overview](/config/) |
+| Each object: fields, types, defaults | [Universe](/config/universe), [Node](/config/node), [Group](/config/group), [Connection](/config/connection) |
+| How files reference each other (`universe`, paths, cycles) | [Sub-universes and navigation](/concepts/sub-universes) |
+| Validation rules and limits | [Validation and limits](/config/validation), [Common errors](/cli/errors) |
+| Commands, options, exit codes | [CLI overview](/cli/) |
+| Examples to start from | [Complete examples](/config/examples) |
+
+Every complete example of the documentation is validated against the engine when the site is
+built. Check the files written with `npx graphinity validate architecture.yml`: it reports every
+error at once, with its file, line and field, and exits with `1` when the configuration is
+invalid. A larger project, over 16 universes, is in the repository:
+[`examples/kestrel`](https://github.com/LePtitBiscuit/Graphinity/tree/main/examples/kestrel)
+(see the [live demo](/guide/demo)).
 
 ## On every page
 
