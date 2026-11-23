@@ -1,0 +1,153 @@
+# Level 1 - Kestrel Logistics, a fictional e-commerce fulfilment and delivery group.
+# Who uses the system, the big building blocks (each opens its own universe) and the SaaS around
+# them. Connections reach deep into the sub-universes with paths (`platform/eu-west/checkout/api`).
+id: kestrel
+name: Kestrel Logistics
+direction: right
+background:
+  color: "#10131a"
+  grid: "#ffffff0d"
+groups:
+  - id: people
+    name: Who uses it
+    color: blue
+    border: dotted
+  - id: kestrel
+    name: Kestrel
+    icon: fluent-emoji-flat:eagle
+    color: orange
+  - id: saas
+    name: Third-party services
+    border: dashed
+    background: none
+nodes:
+  # People
+  - id: customers
+    name: Customers
+    icon: mdi:account-group
+    description: Shoppers ordering on the storefront and the mobile app.
+    group: people
+    tags: [2.4M/month]
+  - id: merchants
+    name: Merchants
+    icon: mdi:storefront
+    description: Brands whose stock Kestrel stores and ships, through the partner API.
+    group: people
+    tags: [1 800]
+  - id: couriers
+    name: Couriers
+    icon: mdi:truck-delivery
+    description: Drivers using the courier app (routes, proof of delivery).
+    group: people
+    tags: [{ text: 6 countries, corner: bottom-right }]
+
+  # Kestrel's own systems
+  - id: edge
+    name: Edge network
+    icon: cloudflare
+    description: DNS, CDN, WAF and load balancing in front of every public endpoint.
+    universe: ./edge/edge.yml
+    group: kestrel
+  - id: platform
+    name: Kestrel Platform
+    icon: fluent-emoji-flat:eagle
+    description: Two Kubernetes regions running every customer-facing service.
+    universe: ./platform/platform.yml
+    group: kestrel
+    size: large
+    color: orange
+    background: "#f0883e1f"
+    tags: [{ text: 99.95% SLO, corner: top-left }, { text: 2 regions, corner: top-right }]
+  - id: data
+    name: Data platform
+    icon: apachekafka
+    description: Event streaming, the warehouse and the analytics built on it.
+    universe: ./data/data.yml
+    group: kestrel
+  - id: warehouses
+    name: Warehouses
+    icon: mdi:warehouse
+    description: A hub, a returns centre and a site being fitted out.
+    universe: ./warehouses/warehouses.yml
+    group: kestrel
+    tags: [3 sites]
+  - id: delivery
+    name: Software delivery
+    icon: githubactions
+    description: From a pull request to production - CI, GitOps, infrastructure as code.
+    universe: ./delivery/delivery.yml
+    group: kestrel
+
+  # SaaS
+  - id: stripe
+    name: Stripe
+    icon: stripe
+    group: saas
+    size: small
+  - id: sentry
+    name: Sentry
+    icon: sentry
+    group: saas
+    size: small
+  - id: pagerduty
+    name: PagerDuty
+    icon: pagerduty
+    group: saas
+    size: small
+  - id: slack
+    name: Slack
+    icon: logos:slack-icon
+    group: saas
+    size: small
+connections:
+  - from: customers
+    to: edge/cdn
+    label: HTTPS
+    arrow: both
+  - from: merchants
+    to: edge/api-gateway
+    label: partner API
+  - from: couriers
+    to: platform/eu-west/routing/tracking
+    label: GPS pings, rounds
+    color: green
+    arrow: both
+  - from: edge/lb-eu
+    to: platform/eu-west/ingress
+    label: eu traffic
+  - from: edge/lb-us
+    to: platform/us-east/ingress
+    label: us traffic
+    style: dashed
+  - from: platform/eu-west/checkout/api
+    to: stripe
+    label: payments, webhooks
+    color: purple
+    arrow: both
+  - from: platform/eu-west/checkout/outbox
+    to: data/kafka/orders
+    label: order events
+    color: teal
+  - from: warehouses/lyon/wms
+    to: platform/eu-west/routing/api
+    label: parcels ready
+  - from: delivery/argocd
+    to: platform/eu-west
+    label: GitOps sync
+    style: dotted
+  - from: delivery/argocd
+    to: platform/us-east
+    style: dotted
+  - from: platform/eu-west/storefront
+    to: sentry
+    label: errors
+    style: dashed
+    color: red
+  - from: platform/observability/alertmanager
+    to: pagerduty
+    label: alerts
+    color: red
+  - from: { node: pagerduty, side: bottom }
+    to: { node: slack, side: top }
+    label: on-call
+    arrow: both

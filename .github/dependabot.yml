@@ -1,0 +1,19 @@
+# Weekly update pull requests, grouped to keep the noise low. Major updates of npm packages are
+# proposed one by one: check them against AGENTS.md (e.g. TypeScript stays on 6.x for vue-tsc).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dependencies:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

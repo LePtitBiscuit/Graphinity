@@ -1,0 +1,72 @@
+# Level 2 - the platform: two Kubernetes regions and the shared services around them.
+id: platform
+name: Kestrel Platform
+direction: down
+groups:
+  - id: regions
+    name: Regions
+    icon: kubernetes
+    color: blue
+  - id: shared
+    name: Shared services
+    border: dashed
+nodes:
+  - id: eu-west
+    name: eu-west-1
+    icon: kubernetes
+    description: Primary region. Serves all traffic in normal operation.
+    universe: ./clusters/eu-west.yml
+    group: regions
+    size: large
+    tags: [primary, { text: 42 nodes, corner: bottom-right }]
+  - id: us-east
+    name: us-east-1
+    icon: kubernetes
+    description: Warm standby, promoted by a DNS failover. Runs the same services at a smaller scale.
+    universe: ./clusters/us-east.yml
+    group: regions
+    border: dashed
+    tags: [standby, { text: 12 nodes, corner: bottom-right }]
+  - id: observability
+    name: Observability
+    icon: grafana
+    description: Metrics, logs, traces and alerting for both regions.
+    universe: ./observability.yml
+    group: shared
+  - id: vault
+    name: Vault
+    icon: vault
+    description: Secrets and short-lived database credentials.
+    group: shared
+  - id: registry
+    name: Registry
+    icon: harbor
+    description: Container images, signed and scanned before deployment.
+    group: shared
+  - id: object-storage
+    name: Object storage
+    icon: logos:aws-s3
+    description: Product images, labels, backups (replicated across regions).
+    group: shared
+connections:
+  - from: eu-west/checkout/db/primary
+    to: us-east/orders-replica
+    label: cross-region replication
+    style: dashed
+    color: teal
+  - from: eu-west
+    to: observability
+    label: OpenTelemetry
+  - from: us-east
+    to: observability
+  - from: { node: eu-west, side: bottom }
+    to: { node: vault, side: top }
+    label: secrets
+    style: dotted
+    arrow: start
+  - from: registry
+    to: eu-west
+    label: images
+  - from: eu-west/checkout/db/backup
+    to: object-storage
+    label: WAL archive

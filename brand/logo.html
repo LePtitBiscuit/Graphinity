@@ -1,0 +1,386 @@
+<!doctype html>
+<!--
+  Graphinity logo: the single source of every logo file in brand/, docs/public and viewer/public.
+  Open it in a browser (no server, no network), pick a variant, then download it as SVG or PNG.
+  After changing the drawing here, regenerate the files: pnpm brand
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Graphinity logo</title>
+    <style>
+      :root {
+        --space: #0b0716;
+        --panel: rgba(255, 255, 255, 0.04);
+        --border: rgba(255, 255, 255, 0.1);
+        --text: #f1ecff;
+        --muted: #a99cc8;
+        --violet: #8b5cf6;
+        --pink: #ec4899;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+        /* A galaxy: violet and pink nebulae over deep space. */
+        background:
+          radial-gradient(ellipse 60% 45% at 15% 10%, rgba(139, 92, 246, 0.28), transparent 70%),
+          radial-gradient(ellipse 50% 40% at 90% 85%, rgba(236, 72, 153, 0.22), transparent 70%),
+          radial-gradient(ellipse 40% 30% at 70% 20%, rgba(192, 38, 211, 0.16), transparent 70%),
+          var(--space);
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 32px 16px 64px;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+        font-weight: 600;
+      }
+      p.lead {
+        margin: 0 0 24px;
+        color: var(--muted);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 20px;
+      }
+      @media (max-width: 760px) {
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .stage {
+        display: grid;
+        place-items: center;
+        min-height: 420px;
+        padding: 40px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+      }
+      .stage svg {
+        width: 100%;
+        max-height: 340px;
+      }
+      .stage[data-bg='transparent'] {
+        background: repeating-conic-gradient(#1a1428 0 25%, #221a33 0 50%) 0 0 / 24px 24px;
+      }
+      .stage[data-bg='dark'] {
+        background: #0b0716;
+      }
+      .stage[data-bg='light'] {
+        background: #ffffff;
+      }
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+      fieldset {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      legend {
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .options label {
+        cursor: pointer;
+      }
+      .options input {
+        position: absolute;
+        opacity: 0;
+      }
+      .options span {
+        display: inline-block;
+        padding: 5px 11px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+      }
+      .options input:checked + span {
+        border-color: transparent;
+        background: linear-gradient(120deg, var(--violet), var(--pink));
+      }
+      .options input:focus-visible + span {
+        outline: 2px solid var(--pink);
+        outline-offset: 2px;
+      }
+      .size {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .size input {
+        width: 100px;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        background: transparent;
+        font: inherit;
+      }
+      .buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      button {
+        padding: 9px 12px;
+        border: 0;
+        border-radius: 10px;
+        color: #fff;
+        background: linear-gradient(120deg, var(--violet), var(--pink));
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        filter: brightness(1.1);
+      }
+      .note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Graphinity logo</h1>
+      <p class="lead">A G drawn as a graph, containing itself: universes inside universes.</p>
+      <div class="layout">
+        <div class="stage" id="stage" data-bg="dark"></div>
+        <form class="controls" id="controls">
+          <fieldset>
+            <legend>Variant</legend>
+            <div class="options">
+              <label><input type="radio" name="variant" value="mark" checked /><span>Mark</span></label>
+              <label><input type="radio" name="variant" value="horizontal" /><span>Horizontal</span></label>
+              <label><input type="radio" name="variant" value="stacked" /><span>Stacked</span></label>
+              <label><input type="radio" name="variant" value="favicon" /><span>Favicon</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Background</legend>
+            <div class="options">
+              <label><input type="radio" name="bg" value="transparent" /><span>Transparent</span></label>
+              <label><input type="radio" name="bg" value="dark" checked /><span>Dark</span></label>
+              <label><input type="radio" name="bg" value="light" /><span>Light</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Text color</legend>
+            <div class="options">
+              <label><input type="radio" name="text" value="light" checked /><span>Light (dark backgrounds)</span></label>
+              <label><input type="radio" name="text" value="dark" /><span>Dark (light backgrounds)</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Glow</legend>
+            <div class="options">
+              <label><input type="radio" name="glow" value="off" checked /><span>Off</span></label>
+              <label><input type="radio" name="glow" value="on" /><span>On</span></label>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>PNG width</legend>
+            <div class="size"><input type="number" name="width" min="16" max="8192" value="1024" /> px</div>
+          </fieldset>
+          <div class="buttons">
+            <button type="button" id="svg">SVG</button>
+            <button type="button" id="png">PNG</button>
+          </div>
+          <p class="note">The text is drawn as paths (Outfit Medium, SIL Open Font License): the files need no font.</p>
+        </form>
+      </div>
+    </main>
+
+    <script>
+      // ---- The drawing ------------------------------------------------------------------------
+      // Galaxy palette: deep violet (bottom left) to pink (top right).
+      const STOPS = [
+        [0, '#6d28d9'],
+        [0.4, '#a855f7'],
+        [0.72, '#d946ef'],
+        [1, '#f472b6'],
+      ]
+      const TEXT = { light: '#f5f3ff', dark: '#1e1638' }
+      const BACKGROUND = { dark: '#0b0716', light: '#ffffff' }
+
+      // One G: a pointy-top hexagon (radius 50, centered on 0,0) open on the upper right, whose bar
+      // runs to the vertical where the next, smaller G ends. The mark repeats it at RATIO.
+      const RATIO = 0.4
+      const H = 43.3 // half width of the hexagon (50 × cos 30°)
+      const G_PATH = `M${H} -25L0 -50L${-H} -25V25L0 50L${H} 25V0H${+(H * RATIO).toFixed(2)}`
+      const NODES = [
+        [0, -50, 6.5], // top
+        [-H, 25, 8], // lower left, the biggest
+        [H, 0, 6.5], // end of the bar
+      ]
+
+      // Outfit Medium, 100 units, baseline at y = 0, starting at x = 0; 473.9 wide, -72 to 20 high.
+      const WORDMARK = 'M35.1 1L35.1 1Q27.9 1 21.5-1.8Q15.1-4.6 10.3-9.6Q5.5-14.5 2.8-21.1Q0-27.6 0-35.1Q0-42.6 2.8-49.1Q5.5-55.6 10.4-60.6Q15.2-65.5 21.8-68.3Q28.3-71 35.9-71L35.9-71Q44.2-71 51.3-67.8Q58.4-64.6 63.2-58.7L63.2-58.7L55.4-50.9Q52.3-55.3 47.1-57.7Q41.9-60 35.9-60L35.9-60Q28.7-60 23.3-56.9Q17.8-53.7 14.8-48.1Q11.8-42.5 11.8-35.1Q11.8-27.7 14.8-22.1Q17.9-16.4 23.1-13.2Q28.3-10 34.9-10L34.9-10Q41.9-10 47.0-12.6Q52-15.1 54.7-20.2L54.7-20.2Q56.4-23.3 57-27.4L57-27.4L34.7-27.4L34.7-37.9L69.3-37.9L69.3-36.3Q69.3-23.8 64.9-15.5Q60.4-7.2 52.7-3.1Q45 1 35.1 1ZM90.2 0L79.2 0L79.2-48L90.2-48L90.2-43Q90.3-43.2 90.5-43.4L90.5-43.4Q94.5-49 102.7-49L102.7-49Q106.3-49 109.2-47.7Q112.1-46.4 114.6-43.5L114.6-43.5L107.4-36.1Q106.1-37.5 104.5-38.1Q102.9-38.7 100.8-38.7L100.8-38.7Q96.2-38.7 93.2-35.8Q90.2-32.9 90.2-26.7L90.2-26.7L90.2 0ZM138.6 1L138.6 1Q132.1 1 126.8-2.3Q121.6-5.6 118.6-11.3Q115.5-16.9 115.5-23.9L115.5-23.9Q115.5-31 118.6-36.6Q121.6-42.3 126.8-45.7Q132.1-49 138.6-49L138.6-49Q144.1-49 148.4-46.7L148.4-46.7Q151.2-45.1 153.3-42.7L153.3-42.7L153.3-48L164.3-48L164.3 0L153.3 0L153.3-5.2Q151.3-2.9 148.4-1.4L148.4-1.4Q144.1 1 138.6 1ZM140.4-9.4L140.4-9.4Q146.5-9.4 150.3-13.5Q154-17.6 154-24L154-24Q154-28.3 152.3-31.6Q150.6-34.9 147.6-36.8Q144.5-38.6 140.4-38.6L140.4-38.6Q136.4-38.6 133.3-36.8Q130.3-34.9 128.6-31.6Q126.8-28.3 126.8-24Q126.8-19.7 128.6-16.4Q130.3-13.1 133.3-11.3Q136.4-9.4 140.4-9.4ZM202.2 1L202.2 1Q196.7 1 192.4-1.4L192.4-1.4Q189.5-2.9 187.5-5.2L187.5-5.2L187.5 20L176.5 20L176.5-48L187.5-48L187.5-42.7Q189.6-45.1 192.5-46.7L192.5-46.7Q196.8-49 202.2-49L202.2-49Q208.7-49 214.0-45.7Q219.2-42.3 222.3-36.6Q225.3-31 225.3-23.9L225.3-23.9Q225.3-16.9 222.3-11.3Q219.2-5.6 214.0-2.3Q208.7 1 202.2 1ZM200.4-9.4L200.4-9.4Q204.4-9.4 207.5-11.3Q210.5-13.1 212.3-16.4Q214-19.7 214-24Q214-28.3 212.3-31.6Q210.5-34.9 207.5-36.8Q204.4-38.6 200.4-38.6Q196.4-38.6 193.3-36.8Q190.2-34.9 188.5-31.6Q186.8-28.3 186.8-24Q186.8-19.7 188.5-16.4Q190.2-13.1 193.3-11.3Q196.4-9.4 200.4-9.4ZM278.4 0L267.4 0L267.4-27.7Q267.4-32.5 264.3-35.6Q261.3-38.7 256.5-38.7L256.5-38.7Q253.3-38.7 250.8-37.3Q248.3-35.9 246.9-33.4Q245.5-30.9 245.5-27.7L245.5-27.7L245.5 0L234.5 0L234.5-72L245.5-72L245.5-42.6Q247.5-45 250.3-46.6L250.3-46.6Q254.5-49 259.8-49L259.8-49Q265.2-49 269.4-46.6Q273.6-44.2 276-40.0Q278.4-35.7 278.4-30.1L278.4-30.1L278.4 0ZM300.7 0L289.7 0L289.7-48L300.7-48L300.7 0ZM295.2-56.8L295.2-56.8Q292.4-56.8 290.6-58.7Q288.7-60.6 288.7-63.4L288.7-63.4Q288.7-66.2 290.6-68.1Q292.4-70 295.2-70L295.2-70Q298.1-70 299.9-68.1Q301.7-66.2 301.7-63.4L301.7-63.4Q301.7-60.6 299.9-58.7Q298.1-56.8 295.2-56.8ZM356.9 0L345.9 0L345.9-27.7Q345.9-32.5 342.8-35.6Q339.8-38.7 335-38.7L335-38.7Q331.8-38.7 329.3-37.3Q326.8-35.9 325.4-33.4Q324-30.9 324-27.7L324-27.7L324 0L313 0L313-48L324-48L324-42.6Q326-45 328.8-46.6L328.8-46.6Q333-49 338.3-49L338.3-49Q343.7-49 347.9-46.3Q352.1-43.5 354.5-39.2Q356.9-34.8 356.9-30.1L356.9-30.1L356.9 0ZM379.2 0L368.2 0L368.2-48L379.2-48L379.2 0ZM373.7-56.8L373.7-56.8Q370.9-56.8 369.1-58.7Q367.2-60.6 367.2-63.4L367.2-63.4Q367.2-66.2 369.1-68.1Q370.9-70 373.7-70L373.7-70Q376.6-70 378.4-68.1Q380.2-66.2 380.2-63.4L380.2-63.4Q380.2-60.6 378.4-58.7Q376.6-56.8 373.7-56.8ZM409.8 0L398.8 0L398.8-38L387.3-38L387.3-48L398.8-48L398.8-68L409.8-68L409.8-48L421.3-48L421.3-38L409.8-38L409.8 0ZM442.7 20L430.5 20L442.5-4.8L424.3-48L436.4-48L448.7-16.7L461.7-48L473.9-48L451.6 0.5L442.7 20Z'
+      const WORDMARK_WIDTH = 473.9
+
+      const round = (n) => +n.toFixed(3)
+
+      function gradient(id) {
+        const stops = STOPS.map(([offset, color]) => `<stop offset="${offset}" stop-color="${color}"/>`).join('')
+        return `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="-50" y1="50" x2="50" y2="-50">${stops}</linearGradient>`
+      }
+
+      /** The mark, centered on (cx, cy), `size` units wide and high (the hexagon fills ~85%). */
+      function mark({ cx, cy, size, levels = 3, stroke = 7, nodeScale = 1 }) {
+        const scale = size / 120
+        let out = ''
+        for (let level = 0; level < levels; level++) {
+          const s = round(scale * RATIO ** level)
+          const circles = NODES.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r * nodeScale}"/>`).join('')
+          out +=
+            `<g transform="translate(${cx} ${cy}) scale(${s})">` +
+            `<path d="${G_PATH}" fill="none" stroke="url(#gx)" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round"/>` +
+            `<g fill="url(#gx)">${circles}</g></g>`
+        }
+        return out
+      }
+
+      function wordmark({ x, baseline, height, color }) {
+        const s = round(height / 100)
+        return `<path transform="translate(${x} ${baseline}) scale(${s})" fill="${color}" d="${WORDMARK}"/>`
+      }
+
+      const GLOW =
+        '<filter id="glow" x="-30%" y="-30%" width="160%" height="160%">' +
+        '<feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>' +
+        '<feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
+
+      /** A complete SVG document for a variant. */
+      function logo({ variant = 'mark', bg = 'transparent', text = 'light', glow = false } = {}) {
+        let width
+        let height
+        let body
+        const color = TEXT[text]
+        if (variant === 'horizontal') {
+          // Mark 120 high; the capitals (about 70% of the font size) are a third of it.
+          ;[width, height] = [146 + WORDMARK_WIDTH * 0.57 + 4, 120]
+          body = mark({ cx: 60, cy: 60, size: 120 }) + wordmark({ x: 146, baseline: 80.5, height: 57, color })
+        } else if (variant === 'stacked') {
+          const textWidth = WORDMARK_WIDTH * 0.6
+          ;[width, height] = [Math.max(textWidth, 160) + 8, 228]
+          body = mark({ cx: width / 2, cy: 70, size: 140 }) + wordmark({ x: (width - textWidth) / 2, baseline: 200, height: 60, color })
+        } else if (variant === 'favicon') {
+          // Small sizes: two levels, thicker lines and nodes.
+          ;[width, height] = [120, 120]
+          body = mark({ cx: 60, cy: 60, size: 128, levels: 2, stroke: 10, nodeScale: 1.3 })
+        } else {
+          ;[width, height] = [120, 120]
+          body = mark({ cx: 60, cy: 60, size: 120 })
+        }
+        // Breathing room around everything but the favicon, which uses the whole square.
+        const pad = variant === 'favicon' ? 0 : 6
+        if (pad) body = `<g transform="translate(${pad} ${pad})">${body}</g>`
+        width = Math.ceil(width) + 2 * pad
+        height += 2 * pad
+        const background = BACKGROUND[bg] ? `<rect width="${width}" height="${height}" fill="${BACKGROUND[bg]}"/>` : ''
+        const defs = `<defs>${gradient('gx')}${glow ? GLOW : ''}</defs>`
+        const content = glow ? `<g filter="url(#glow)">${body}</g>` : body
+        return (
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">` +
+          `<title>Graphinity</title>${defs}${background}${content}</svg>`
+        )
+      }
+
+      /** Renders an SVG document to a PNG blob, `pixels` wide. */
+      async function png(svg, pixels) {
+        const [, w, h] = svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/).map(Number)
+        const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }))
+        try {
+          const image = new Image()
+          image.src = url
+          await image.decode()
+          const canvas = document.createElement('canvas')
+          canvas.width = pixels
+          canvas.height = Math.round((pixels * h) / w)
+          canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+          return await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+        } finally {
+          URL.revokeObjectURL(url)
+        }
+      }
+
+      // Used by scripts/brand.ts to write the files of the repository.
+      window.graphinityLogo = { logo, png }
+
+      // ---- The page ---------------------------------------------------------------------------
+      const form = document.getElementById('controls')
+      const stage = document.getElementById('stage')
+
+      function options() {
+        const data = new FormData(form)
+        return {
+          variant: data.get('variant'),
+          bg: data.get('bg'),
+          text: data.get('text'),
+          glow: data.get('glow') === 'on',
+          width: Math.min(8192, Math.max(16, Number(data.get('width')) || 1024)),
+        }
+      }
+
+      function render() {
+        const current = options()
+        stage.dataset.bg = current.bg
+        // Our own markup, built from constants: no user input reaches it.
+        stage.innerHTML = logo(current)
+      }
+
+      function fileName({ variant, bg, text, glow }, extension, width) {
+        const parts = ['graphinity', variant]
+        if (variant === 'horizontal' || variant === 'stacked') parts.push(`${text}-text`)
+        if (bg !== 'transparent') parts.push(`${bg}-bg`)
+        if (glow) parts.push('glow')
+        if (width) parts.push(`${width}px`)
+        return `${parts.join('-')}.${extension}`
+      }
+
+      function download(blob, name) {
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = name
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000)
+      }
+
+      document.getElementById('svg').addEventListener('click', () => {
+        const current = options()
+        download(new Blob([logo(current)], { type: 'image/svg+xml' }), fileName(current, 'svg'))
+      })
+      document.getElementById('png').addEventListener('click', async () => {
+        const current = options()
+        download(await png(logo(current), current.width), fileName(current, 'png', current.width))
+      })
+      form.addEventListener('change', render)
+      render()
+    </script>
+  </body>
+</html>

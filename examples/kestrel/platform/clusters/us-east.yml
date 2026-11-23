@@ -1,0 +1,45 @@
+# Level 3 - the standby cluster. It runs the same checkout service as eu-west: both nodes open
+# the same file (../services/checkout.yml), so it is one universe reached from two places.
+id: us-east
+name: us-east-1 cluster
+direction: right
+background:
+  grid: "#4f8cff1a"
+groups:
+  - id: cluster
+    name: Kubernetes · us-east-1 (standby)
+    icon: kubernetes
+    border: dashed
+    color: gray
+nodes:
+  - id: ingress
+    name: Ingress
+    icon: nginx
+    group: cluster
+  - id: storefront
+    name: Storefront
+    icon: nextdotjs
+    group: cluster
+    tags: [2 pods]
+  - id: checkout
+    name: Checkout
+    icon: typescript
+    description: Same service as in eu-west, scaled down until a failover.
+    universe: ../services/checkout.yml
+    group: cluster
+    tags: [2 pods]
+  - id: orders-replica
+    name: Orders replica
+    icon: postgresql
+    description: Streaming replica of the orders database, promoted on failover.
+    border: dashed
+    tags: [read-only]
+connections:
+  - from: ingress
+    to: storefront
+  - from: ingress
+    to: checkout
+  - from: checkout
+    to: orders-replica
+    label: reads
+    style: dashed

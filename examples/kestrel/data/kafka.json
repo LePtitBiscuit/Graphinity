@@ -1,0 +1,53 @@
+{
+  "id": "kafka",
+  "name": "Kafka cluster",
+  "direction": "down",
+  "groups": [
+    { "id": "brokers", "name": "Brokers", "icon": "apachekafka", "color": "gray", "border": "dotted" },
+    { "id": "topics", "name": "Topics", "color": "teal" },
+    { "id": "contracts", "name": "Contracts", "border": "dashed", "background": "none" }
+  ],
+  "nodes": [
+    { "id": "broker-1", "name": "broker-1", "icon": "apachekafka", "group": "brokers", "size": "small", "tags": ["az-a"] },
+    { "id": "broker-2", "name": "broker-2", "icon": "apachekafka", "group": "brokers", "size": "small", "tags": ["az-b"] },
+    { "id": "broker-3", "name": "broker-3", "icon": "apachekafka", "group": "brokers", "size": "small", "tags": ["az-c"] },
+    {
+      "id": "orders",
+      "name": "orders.v1",
+      "icon": "vscode-icons:file-type-avro",
+      "description": "Order placed, paid, cancelled. Key: order id. Retention 30 days.",
+      "group": "topics",
+      "tags": [{ "text": "24 partitions", "corner": "bottom-right" }]
+    },
+    {
+      "id": "shipments",
+      "name": "shipments.v2",
+      "icon": "vscode-icons:file-type-avro",
+      "description": "Parcel picked, packed, handed over, delivered.",
+      "group": "topics",
+      "tags": [{ "text": "12 partitions", "corner": "bottom-right" }]
+    },
+    {
+      "id": "tracking",
+      "name": "tracking.positions",
+      "icon": "vscode-icons:file-type-protobuf",
+      "description": "Courier GPS positions. Compacted per courier.",
+      "group": "topics",
+      "color": "yellow",
+      "tags": [{ "text": "48 partitions", "corner": "bottom-right" }]
+    },
+    {
+      "id": "schemas",
+      "name": "Schema registry",
+      "icon": "mdi:file-document-check",
+      "description": "Avro and Protobuf schemas; incompatible changes are rejected.",
+      "group": "contracts"
+    }
+  ],
+  "connections": [
+    { "from": "schemas", "to": "orders", "style": "dotted", "label": "validates" },
+    { "from": "schemas", "to": "shipments", "style": "dotted" },
+    { "from": "schemas", "to": "tracking", "style": "dotted" },
+    { "from": "orders", "to": "shipments", "label": "fulfilment starts", "color": "teal" }
+  ]
+}

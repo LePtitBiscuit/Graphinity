@@ -1,0 +1,75 @@
+# Level 4 - inside the checkout service. Opened from both clusters. Its database opens a fifth
+# level, stored in another folder (../../data/orders-db.yml).
+id: checkout
+name: Checkout service
+direction: down
+groups:
+  - id: service
+    name: checkout
+    icon: typescript
+    color: purple
+  - id: storage
+    name: Storage
+    color: teal
+nodes:
+  - id: api
+    name: Checkout API
+    icon: nodedotjs
+    description: REST and gRPC endpoints for carts and orders.
+    group: service
+    size: large
+    tags: [v4.12, { text: p99 180 ms, corner: bottom-right }]
+  - id: saga
+    name: Order saga
+    icon: typescript
+    description: Orchestrates payment, stock reservation and delivery booking; compensates on failure.
+    group: service
+  - id: outbox
+    name: Outbox relay
+    icon: go
+    description: Publishes committed order events to Kafka, exactly once.
+    group: service
+    size: small
+  - id: fraud
+    name: Fraud scoring
+    icon: python
+    description: Gradient-boosted model scoring every order before payment.
+    group: service
+    size: small
+    color: red
+  - id: db
+    name: Orders DB
+    icon: postgresql
+    description: PostgreSQL cluster managed by Patroni.
+    universe: ../../data/orders-db.yml
+    group: storage
+    size: large
+    tags: [v17]
+  - id: cache
+    name: Cart cache
+    icon: redis
+    description: Carts and idempotency keys, 24 h TTL.
+    group: storage
+    tags: [v7.4]
+connections:
+  - from: api
+    to: saga
+    label: place order
+  - from: { node: api, side: right }
+    to: { node: fraud, side: top }
+    label: score
+    color: red
+    arrow: both
+  - from: { node: api, side: left }
+    to: { node: cache, side: left }
+    label: carts
+    style: dashed
+    arrow: both
+  - from: saga
+    to: db/pgbouncer
+    label: SQL
+  - from: { node: outbox, side: bottom }
+    to: { node: db, side: top }
+    label: logical decoding
+    style: dotted
+    arrow: start

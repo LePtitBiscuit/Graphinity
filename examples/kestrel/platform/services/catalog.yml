@@ -1,0 +1,53 @@
+# Level 4 - inside the catalog service.
+id: catalog
+name: Catalog service
+direction: right
+nodes:
+  - id: api
+    name: Catalog API
+    icon: go
+    description: Products, variants, prices per market.
+    tags: [v2.31]
+  - id: search
+    name: Search
+    icon: opensearch
+    description: Full-text and faceted search, rebuilt nightly, updated live.
+    tags: [3 nodes]
+  - id: indexer
+    name: Indexer
+    icon: go
+    size: small
+  - id: images
+    name: Image resizer
+    icon: rust
+    description: Resizes product images on demand; cached by the CDN.
+    place: last # placement hint: at the end of the flow, with the search engine
+  - id: db
+    name: Catalog DB
+    icon: postgresql
+    tags: [v17]
+  - id: stock
+    name: Stock levels
+    icon: redis
+    description: Live stock per warehouse, fed by the warehouse systems.
+connections:
+  - from: api
+    to: search
+    label: queries
+    arrow: both
+  - from: api
+    to: db
+    label: SQL
+  - from: api
+    to: stock
+  - from: db
+    to: indexer
+    label: changes
+    style: dashed
+  - from: indexer
+    to: search
+    label: bulk index
+  - from: api
+    to: images
+    label: signed URLs
+    style: dotted

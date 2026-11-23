@@ -1,0 +1,25 @@
+{
+  // Node side (core, CLI, tests, tooling configs). Type-check only; see tsconfig.build.json for emit.
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+
+    // Sources import with `.ts` extensions so they can run directly under Node's type stripping;
+    // tsc rewrites them to `.js` on emit.
+    "rewriteRelativeImportExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src", "tests", "e2e", "docs/scripts", "scripts/brand.ts", "docs/.vitepress/config.ts", "vite.config.ts", "vitest.config.ts", "playwright.config.ts"]
+}

@@ -1,0 +1,63 @@
+# Level 3 - the Rotterdam returns centre: returned parcels are graded, then restocked, refurbished
+# or recycled.
+id: rotterdam-returns
+name: Rotterdam returns centre
+direction: down
+groups:
+  - id: intake
+    name: Intake
+    color: yellow
+  - id: outcomes
+    name: Outcomes
+    border: dashed
+nodes:
+  - id: dock
+    name: Inbound dock
+    icon: mdi:dolly
+    group: intake
+  - id: grading
+    name: Grading
+    icon: mdi:clipboard-check
+    description: Each item is inspected and graded A to D.
+    group: intake
+    tags: [~2k items/day]
+  - id: restock
+    name: Restock
+    icon: mdi:warehouse
+    group: outcomes
+    color: green
+  - id: refurbish
+    name: Refurbish
+    icon: mdi:hammer-wrench
+    group: outcomes
+    color: yellow
+  - id: recycle
+    name: Recycle
+    icon: mdi:recycle
+    group: outcomes
+    color: gray
+    size: small
+  - id: refunds
+    name: Refunds
+    icon: stripe
+    description: Refund triggered once the item is graded.
+connections:
+  - from: dock
+    to: grading
+  - from: grading
+    to: restock
+    label: A
+    color: green
+  - from: grading
+    to: refurbish
+    label: B–C
+    color: yellow
+  - from: grading
+    to: recycle
+    label: D
+    style: dotted
+  - from: { node: grading, side: right }
+    to: { node: refunds, side: left }
+    label: graded
+    style: dashed
+    color: purple

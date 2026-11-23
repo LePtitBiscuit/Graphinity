@@ -1,0 +1,102 @@
+# Level 2 - the data platform: from operational events to the warehouse and dashboards.
+id: data
+name: Data platform
+direction: right
+background:
+  color: "#0f1a1f"
+  grid: "#2fb8ac14"
+groups:
+  - id: streaming
+    name: Streaming
+    color: teal
+  - id: lakehouse
+    name: Lakehouse
+    color: blue
+  - id: analytics
+    name: Analytics
+    color: purple
+    border: dashed
+nodes:
+  - id: cdc
+    name: Change capture
+    icon: mdi:database-sync
+    description: Streams the changes of the catalog and orders databases.
+    group: streaming
+  - id: kafka
+    name: Kafka
+    icon: apachekafka
+    description: The event backbone. Its topics are described in kafka.json.
+    universe: ./kafka.json
+    group: streaming
+    size: large
+    tags: [3 brokers]
+  - id: flink
+    name: Stream processing
+    icon: apacheflink
+    description: Real-time aggregates - live stock, delivery delays, fraud features.
+    group: streaming
+  - id: lake
+    name: Data lake
+    icon: logos:aws-s3
+    description: Raw events as Parquet files, partitioned by day.
+    group: lakehouse
+  - id: warehouse
+    name: Warehouse
+    icon: clickhouse
+    group: lakehouse
+    size: large
+    tags: [{ text: 38 TB, corner: bottom-right }]
+  - id: airflow
+    name: Orchestration
+    icon: apacheairflow
+    description: Nightly loads, dbt runs, model training.
+    group: lakehouse
+    size: small
+  - id: dbt
+    name: dbt models
+    icon: logos:dbt-icon
+    group: analytics
+  - id: bi
+    name: Dashboards
+    icon: metabase
+    description: Self-service dashboards for operations and finance.
+    group: analytics
+  - id: notebooks
+    name: Notebooks
+    icon: jupyter
+    group: analytics
+    size: small
+    after: dbt # placement hint: further along the flow than dbt, not under it
+connections:
+  - from: cdc
+    to: kafka/orders
+    label: row changes
+  - from: kafka/tracking
+    to: flink
+    label: GPS events
+    color: yellow
+  - from: kafka
+    to: lake
+    label: sink connector
+  - from: flink
+    to: warehouse
+    label: aggregates
+  - from: lake
+    to: warehouse
+    label: nightly load
+    style: dashed
+  - from: { node: airflow, side: top }
+    to: { node: lake, side: bottom }
+    style: dotted
+    arrow: none
+  - from: warehouse
+    to: dbt
+    label: models
+    arrow: both
+  - from: dbt
+    to: bi
+  - from: { node: warehouse, side: bottom }
+    to: { node: notebooks, side: left }
+    label: ad-hoc queries
+    style: dotted
+    arrow: both

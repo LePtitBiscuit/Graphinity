@@ -1,0 +1,124 @@
+# Level 3 - the primary Kubernetes cluster. Namespaces are groups nested up to the maximum of
+# 4 levels: cluster › applications › commerce namespace › checkout node pool.
+id: eu-west
+name: eu-west-1 cluster
+direction: right
+background:
+  grid: true
+groups:
+  - id: cluster
+    name: Kubernetes · eu-west-1
+    icon: kubernetes
+    border: dashed
+    background: none
+  - id: ns-ingress
+    name: ingress
+    group: cluster
+  - id: apps
+    name: Applications
+    color: blue
+    group: cluster
+  - id: ns-commerce
+    name: commerce namespace
+    color: purple
+    group: apps
+  - id: checkout-pool
+    name: checkout · dedicated node pool
+    color: pink
+    border: dotted
+    group: ns-commerce
+  - id: ns-logistics
+    name: logistics namespace
+    color: green
+    group: apps
+  - id: ns-system
+    name: kube-system
+    border: dotted
+    group: cluster
+nodes:
+  - id: ingress
+    name: Ingress
+    icon: nginx
+    description: ingress-nginx, TLS from cert-manager.
+    group: ns-ingress
+    tags: [3 replicas]
+  - id: storefront
+    name: Storefront
+    icon: nextdotjs
+    description: Server-rendered shop and the API of the mobile app.
+    group: ns-commerce
+    tags: [{ text: 12 pods, corner: bottom-left }]
+  - id: catalog
+    name: Catalog
+    icon: go
+    description: Products, prices and stock levels; full-text search.
+    universe: ../services/catalog.yml
+    group: ns-commerce
+  - id: checkout
+    name: Checkout
+    icon: typescript
+    description: Carts, orders and payments. Its own node pool, scaled for sales peaks.
+    universe: ../services/checkout.yml
+    group: checkout-pool
+    size: large
+    tags: [critical, { text: 8 pods, corner: bottom-left }]
+  - id: webhooks
+    name: Payment webhooks
+    icon: nodedotjs
+    description: Receives Stripe events and hands them to checkout.
+    group: checkout-pool
+    size: small
+  - id: routing
+    name: Routing
+    icon: python
+    description: Delivery rounds, ETAs and live tracking.
+    universe: ../services/routing.yml
+    group: ns-logistics
+    size: large
+  - id: notifications
+    name: Notifications
+    icon: go
+    description: E-mail, SMS and push messages to customers.
+    group: ns-logistics
+  - id: cilium
+    name: Cilium
+    icon: cilium
+    description: Network policies between namespaces.
+    group: ns-system
+    size: small
+  - id: otel
+    name: OTel collector
+    icon: opentelemetry
+    description: Collects metrics, logs and traces of every pod.
+    group: ns-system
+    size: small
+connections:
+  - from: ingress
+    to: storefront
+    label: /
+  - from: ingress
+    to: checkout
+    label: /checkout
+  - from: { node: storefront, side: bottom }
+    to: { node: catalog, side: top }
+    label: gRPC
+    arrow: both
+  - from: storefront
+    to: checkout/api
+    label: cart API
+  - from: webhooks
+    to: checkout/api
+    label: payment events
+    color: purple
+  - from: checkout/saga
+    to: routing/api
+    label: delivery slot
+    color: green
+    arrow: both
+  - from: routing/tracking
+    to: notifications
+    label: status changes
+  - from: { node: storefront, side: bottom }
+    to: { node: otel, side: top }
+    style: dotted
+    color: gray

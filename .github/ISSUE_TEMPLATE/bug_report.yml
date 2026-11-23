@@ -1,0 +1,30 @@
+name: Bug report
+description: Something does not work as documented.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Minimal configuration
+      description: The smallest YAML/JSON files that reproduce the problem. Remove anything private.
+      render: yaml
+  - type: textarea
+    id: output
+    attributes:
+      label: Command and output
+      description: The command you ran (`graphinity validate …`) and its full output.
+      render: text
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Output of `npx graphinity --version` and `node --version`, your OS and browser.
+    validations:
+      required: true

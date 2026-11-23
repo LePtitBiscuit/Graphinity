@@ -1,0 +1,98 @@
+# Level 3 - the Lyon hub, drawn bottom to top over the site's floor plan (a background image).
+# The groups are frosted glass over the plan.
+id: lyon-hub
+name: Lyon hub
+direction: up
+background:
+  image: ../images/floor-plan.svg
+  blur: 3
+groups:
+  - id: site-it
+    name: Site IT
+    icon: ubuntu
+    color: blue
+    blur: 12
+  - id: floor
+    name: Warehouse floor
+    color: yellow
+    blur: 12
+  - id: packing
+    name: Packing stations
+    group: floor
+    border: dashed
+    blur: 6
+nodes:
+  - id: wms
+    name: WMS
+    icon: mdi:warehouse
+    description: Warehouse management - inventory, waves, pick lists.
+    group: site-it
+    size: large
+  - id: gateway
+    name: Edge gateway
+    icon: raspberrypi
+    description: Bridges the floor devices to the WMS over MQTT; keeps working offline.
+    group: site-it
+  - id: mqtt
+    name: MQTT broker
+    icon: eclipsemosquitto
+    group: site-it
+    size: small
+  - id: scanners
+    name: Handheld scanners
+    icon: mdi:barcode-scan
+    group: floor
+    tags: [120]
+  - id: robots
+    name: Picking robots
+    icon: mdi:robot-industrial
+    description: Autonomous mobile robots bringing shelves to the pickers.
+    group: floor
+    tags: [64 AMR]
+  - id: conveyor
+    name: Sorter
+    icon: mdi:call-split
+    group: floor
+  - id: printers
+    name: Label printers
+    icon: mdi:printer
+    group: packing
+  - id: scales
+    name: Check-weigh scales
+    icon: mdi:scale
+    group: packing
+    size: small
+  - id: returns
+    name: Returns desk
+    icon: mdi:package-variant-remove
+    description: Inspects returned items and puts them back into stock.
+    border: dashed
+connections:
+  - from: scanners
+    to: mqtt
+    label: scans
+  - from: robots
+    to: mqtt
+    label: telemetry
+    style: dotted
+  - from: conveyor
+    to: mqtt
+  - from: mqtt
+    to: gateway
+  - from: gateway
+    to: wms
+    label: events
+    arrow: both
+  # Declared from the printers so that the floor stays below the WMS; the arrow points at them.
+  - from: printers
+    to: wms
+    label: shipping labels
+    color: orange
+    arrow: start
+  - from: scales
+    to: gateway
+    style: dotted
+  - from: returns
+    to: wms
+    label: restock
+    color: yellow

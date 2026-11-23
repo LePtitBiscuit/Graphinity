@@ -1,0 +1,8 @@
+allowBuilds:
+  # esbuild (used by VitePress) ships its binary as an optional dependency: its install script
+  # is not needed.
+  esbuild: false
+overrides:
+  # VitePress 1.6 (the latest stable release) pins Vite 5, which has known advisories for its dev
+  # server. Vite 6.4.4+ fixes them and works with VitePress 1.6. The viewer uses its own Vite 8.
+  'vitepress>vite': ^6.4.4

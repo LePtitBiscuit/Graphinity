@@ -1,0 +1,69 @@
+# Level 2 - the edge: everything between the Internet and the two Kubernetes regions.
+id: edge
+name: Edge network
+direction: right
+groups:
+  - id: cloudflare
+    name: Cloudflare
+    icon: cloudflare
+    color: orange
+  - id: security
+    name: Security
+    color: red
+    group: cloudflare
+  - id: balancing
+    name: Load balancing
+    group: cloudflare
+    border: dashed
+nodes:
+  - id: dns
+    name: DNS
+    icon: cloudflare
+    description: kestrel.example, shop.kestrel.example, api.kestrel.example
+    group: cloudflare
+  - id: cdn
+    name: CDN
+    icon: cloudflare
+    description: Caches the storefront and product images at the edge.
+    group: cloudflare
+    tags: [94% hit]
+  - id: waf
+    name: WAF
+    icon: cloudflare
+    description: Managed rules, rate limiting and bot management.
+    group: security
+  - id: api-gateway
+    name: API gateway
+    icon: envoyproxy
+    description: Partner API keys, quotas and request signing.
+    group: security
+  - id: lb-eu
+    name: eu-west LB
+    icon: cloudflare
+    group: balancing
+    tags: [primary]
+  - id: lb-us
+    name: us-east LB
+    icon: cloudflare
+    group: balancing
+    tags: [failover]
+    border: dashed
+connections:
+  - from: dns
+    to: cdn
+  - from: cdn
+    to: waf
+    label: cache miss
+  - from: waf
+    to: api-gateway
+    label: /api
+  - from: waf
+    to: lb-eu
+    label: /
+  - from: api-gateway
+    to: lb-eu
+  - from: lb-eu
+    to: lb-us
+    label: health-checked failover
+    style: dashed
+    color: yellow

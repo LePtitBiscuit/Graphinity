@@ -1,0 +1,43 @@
+/* Galaxy colors, from the logo (brand/logo.html): deep violet to pink. */
+:root {
+  --vp-c-brand-1: #7c3aed;
+  --vp-c-brand-2: #9d5cf6;
+  --vp-c-brand-3: #7c3aed;
+  --vp-c-brand-soft: rgba(124, 58, 237, 0.14);
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #7c3aed 15%, #d946ef 60%, #ec4899);
+  --vp-home-hero-image-background-image: linear-gradient(-45deg, rgba(124, 58, 237, 0.4) 50%, rgba(236, 72, 153, 0.35) 50%);
+  --vp-home-hero-image-filter: blur(56px);
+}
+
+.dark {
+  --vp-c-brand-1: #c084fc;
+  --vp-c-brand-2: #a855f7;
+  --vp-c-brand-3: #7c3aed;
+  --vp-c-brand-soft: rgba(168, 85, 247, 0.16);
+}
+
+/* The logo of the home page: as large as the theme allows (the SVG has a small intrinsic size). */
+.VPHero .image-src {
+  width: 100%;
+  height: auto;
+}
+
+/* Screenshots of the viewer. */
+.screenshot {
+  display: block;
+  width: 100%;
+  margin: 16px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+}
+
+/* The live demo frame. */
+.demo-frame {
+  width: 100%;
+  height: 560px;
+  margin: 16px 0;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background: #0e1015;
+}

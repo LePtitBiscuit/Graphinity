@@ -1,0 +1,54 @@
+:root {
+  --na-bg: #0e1015;
+  --na-card: #161a22;
+  --na-card-border: #272d39;
+  --na-text: #e6e9ef;
+  --na-muted: #8a93a5;
+  --na-edge: #5b6477;
+  --na-label: #aab2c0;
+  --na-accent: #6b8afd;
+  --na-tag: #222837;
+  --na-group: rgba(255, 255, 255, 0.018);
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--na-bg);
+  color: var(--na-text);
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.vue-flow {
+  /* Never a scroll container: the transformed canvas overflows it, and focusing a control
+     button would otherwise scroll the whole diagram out of place. */
+  overflow: clip;
+  --xy-background-color: var(--na-bg);
+  --xy-edge-stroke: var(--na-edge);
+  --xy-edge-stroke-width: 1.5;
+  --xy-edge-label-color: var(--na-label);
+  --xy-edge-label-background-color: var(--na-bg);
+  --xy-controls-button-background-color: var(--na-card);
+  --xy-controls-button-background-color-hover: #1f2430;
+  --xy-controls-button-color: var(--na-muted);
+  --xy-controls-button-color-hover: var(--na-text);
+  --xy-controls-button-border-color: var(--na-card-border);
+  --xy-controls-box-shadow: none;
+}
+
+.vue-flow__attribution {
+  background: transparent;
+}
+.vue-flow__attribution a {
+  color: var(--na-edge);
+}
+
+/* Must match LABEL_FONT in UniverseView.vue (used to size labels for the layout). */
+.vue-flow__edge-text {
+  font-size: 11px;
+  font-weight: 500;
+}

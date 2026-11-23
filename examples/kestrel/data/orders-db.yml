@@ -1,0 +1,70 @@
+# Level 5 - the orders database, opened from the checkout service
+# (Kestrel Logistics › Kestrel Platform › eu-west-1 › Checkout › Orders DB).
+id: orders-db
+name: Orders database
+direction: up
+groups:
+  - id: patroni
+    name: Patroni cluster
+    icon: postgresql
+    color: teal
+  - id: replicas
+    name: Replicas
+    group: patroni
+    border: dashed
+nodes:
+  - id: pgbouncer
+    name: PgBouncer
+    icon: postgresql
+    description: Connection pooling, transaction mode.
+    size: small
+  - id: primary
+    name: Primary
+    icon: postgresql
+    group: patroni
+    size: large
+    tags: [writes, { text: 16 vCPU, corner: bottom-right }]
+  - id: replica-a
+    name: Replica A
+    icon: postgresql
+    group: replicas
+    tags: [sync]
+  - id: replica-b
+    name: Replica B
+    icon: postgresql
+    group: replicas
+    tags: [async]
+  - id: etcd
+    name: etcd
+    icon: etcd
+    description: Leader election for Patroni.
+    size: small
+  - id: backup
+    name: WAL-G
+    icon: postgresql
+    description: Continuous WAL archiving and daily base backups.
+    color: gray
+connections:
+  - from: pgbouncer
+    to: primary
+    label: writes
+  - from: { node: pgbouncer, side: right }
+    to: { node: replica-a, side: right }
+    label: reads
+    style: dashed
+  - from: primary
+    to: replica-a
+    label: synchronous
+    color: teal
+  - from: primary
+    to: replica-b
+    label: asynchronous
+    style: dashed
+  - from: etcd
+    to: primary
+    label: leader lock
+    style: dotted
+    arrow: both
+  - from: primary
+    to: backup
+    label: WAL

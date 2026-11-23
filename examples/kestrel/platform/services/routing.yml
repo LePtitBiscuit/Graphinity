@@ -1,0 +1,67 @@
+# Level 4 - inside the routing service: delivery rounds, ETAs and live tracking. Drawn right to
+# left, the couriers' side on the left.
+id: routing
+name: Routing service
+direction: left
+groups:
+  - id: planning
+    name: Planning
+    color: green
+  - id: live
+    name: Live tracking
+    color: yellow
+    border: dashed
+nodes:
+  - id: api
+    name: Routing API
+    icon: fastapi
+    description: Books deliveries and exposes rounds to the courier app.
+    group: planning
+  - id: optimizer
+    name: Round optimizer
+    icon: python
+    description: Vehicle routing solver, re-run every 15 minutes per depot.
+    group: planning
+    size: large
+    tags: [{ text: 15 min, corner: bottom-right }]
+  - id: eta
+    name: ETA model
+    icon: pytorch
+    description: Predicts arrival times from traffic and courier history.
+    group: planning
+  - id: maps
+    name: Map tiles
+    icon: openstreetmap
+    description: Self-hosted OpenStreetMap tiles and road graph.
+    group: planning
+    size: small
+  - id: tracking
+    name: Tracking ingest
+    icon: rust
+    description: Receives GPS pings from the courier app (about 4 000 per second at peak).
+    group: live
+    tags: [4k msg/s]
+  - id: positions
+    name: Positions
+    icon: timescale
+    description: Time-series store of every courier position (90 days).
+    group: live
+connections:
+  - from: api
+    to: optimizer
+    label: new parcels
+  - from: optimizer
+    to: maps
+    label: road graph
+  - from: optimizer
+    to: eta
+    label: predict
+    arrow: both
+  - from: tracking
+    to: positions
+    label: write
+    color: yellow
+  - from: { node: positions, side: top }
+    to: { node: eta, side: bottom }
+    label: history
+    style: dashed

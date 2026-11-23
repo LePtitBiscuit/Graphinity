@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output (the package build, sites built by the CLI, package archives)
+dist/
+*.tgz
+
+# Documentation site: VitePress output and cache, the generated demo
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+docs/public/demo/
+
+# Test artifacts (Vitest, Playwright)
+coverage/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Caches and temporary files
+.cache/
+.eslintcache
+*.tsbuildinfo
+.vite/
+tmp/
+*.tmp
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.npmrc
+*.pem
+*.key
+
+# Editors and operating systems
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Local tooling state (personal agent settings; shared AGENTS.md / CLAUDE.md stay tracked)
+.claude/settings.local.json
+.codegraph/

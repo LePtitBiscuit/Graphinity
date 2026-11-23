@@ -1,0 +1,62 @@
+name: Release
+
+# Publishes to npm when a version tag (vX.Y.Z) is pushed, with npm Trusted Publishing (OIDC):
+# no npm token is stored anywhere. Never runs on pull requests.
+# The trusted publisher configured on npmjs.com must name this file (release.yml) and the
+# environment below (npm).
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest # Trusted Publishing needs a GitHub-hosted runner
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # OIDC token exchanged for a short-lived npm credential; enables provenance
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # npm >= 11.5.1 is required for Trusted Publishing
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Check the tag
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Tag $GITHUB_REF_NAME does not point to a commit of main"
+            exit 1
+          fi
+          npm --version
+          node -e "const [a,b,c]=process.argv[1].split('.').map(Number);process.exit(a>11||(a===11&&(b>5||(b===5&&c>=1)))?0:1)" "$(npm --version)" \
+            || { echo "::error::npm >= 11.5.1 is required for Trusted Publishing"; exit 1; }
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:e2e
+
+      # The archive that is checked is the one published (publishing a .tgz runs no scripts).
+      - run: npm pack
+      - run: node scripts/check-package.mjs graphinity-*.tgz
+      - run: npm publish graphinity-*.tgz --access public

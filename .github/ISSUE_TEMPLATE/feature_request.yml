@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest a new capability or an improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What you are trying to describe or do, and why it is hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: How it could look in the configuration files or the viewer.
+  - type: markdown
+    attributes:
+      value: >
+        Graphinity keeps the files as the only source of truth: the viewer is read-only, with no
+        editing interface, backend or network access at runtime.

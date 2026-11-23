@@ -1,0 +1,53 @@
+# Level 2 - the fulfilment network: the Lyon hub, the Rotterdam returns centre, and a site that
+# has no universe of its own yet.
+id: warehouses
+name: Warehouse network
+direction: right
+groups:
+  - id: europe
+    name: Europe
+    color: purple
+  - id: america
+    name: North America
+    color: blue
+nodes:
+  - id: lyon
+    name: Lyon
+    icon: mdi:warehouse
+    description: Main European hub - 42 000 m², 3 shifts.
+    universe: ./lyon.yml
+    group: europe
+    size: large
+    tags: [hub, { text: 38k parcels/day, corner: bottom-right }]
+  - id: rotterdam
+    name: Rotterdam
+    icon: mdi:warehouse
+    description: Port site, bulky items and returns.
+    universe: ./rotterdam.yml
+    group: europe
+    tags: [{ text: 12k parcels/day, corner: bottom-right }]
+  - id: newark
+    name: Newark
+    icon: mdi:warehouse
+    description: North American site, being fitted out.
+    group: america
+    border: dashed
+    tags: [opens 2027]
+  - id: carriers
+    name: Carrier hand-over
+    icon: mdi:truck-delivery
+    description: Line-haul trucks between sites and to the last-mile depots.
+connections:
+  - from: lyon
+    to: rotterdam
+    label: line-haul
+    style: dashed
+  - from: lyon
+    to: carriers
+    label: daily departures
+  - from: rotterdam
+    to: carriers
+  - from: rotterdam/restock
+    to: lyon/wms
+    label: restock
+    color: yellow

@@ -1,0 +1,78 @@
+# Level 2 - software delivery, from a pull request to both regions.
+id: delivery
+name: Software delivery
+direction: right
+groups:
+  - id: ci
+    name: Continuous integration
+    icon: githubactions
+    color: blue
+  - id: cd
+    name: Continuous delivery
+    icon: argo
+    color: orange
+  - id: infra
+    name: Infrastructure as code
+    border: dashed
+nodes:
+  - id: github
+    name: GitHub
+    icon: github
+    description: Monorepo, code owners, required reviews.
+  - id: renovate
+    name: Renovate
+    icon: renovate
+    description: Dependency update pull requests, grouped weekly.
+    size: small
+  - id: actions
+    name: GitHub Actions
+    icon: githubactions
+    description: Tests, image builds, SBOMs and signatures.
+    group: ci
+  - id: scanning
+    name: Image scanning
+    icon: devicon:docker
+    group: ci
+    size: small
+  - id: charts
+    name: Helm charts
+    icon: helm
+    group: cd
+  - id: argocd
+    name: Argo CD
+    icon: argo
+    description: Syncs every cluster from Git; progressive rollouts.
+    group: cd
+    size: large
+  - id: terraform
+    name: Terraform
+    icon: terraform
+    description: Accounts, networks, clusters and databases.
+    group: infra
+  - id: modules
+    name: Modules
+    icon: vscode-icons:file-type-terraform
+    group: infra
+    size: small
+connections:
+  - from: renovate
+    to: github
+    label: pull requests
+    style: dashed
+  - from: github
+    to: actions
+    label: push, PR
+  - from: actions
+    to: scanning
+  - from: actions
+    to: charts
+    label: image tags
+  - from: charts
+    to: argocd
+  - from: github
+    to: terraform
+    label: plan / apply
+    color: purple
+  - from: { node: modules, side: top }
+    to: { node: terraform, side: bottom }
+    style: dotted

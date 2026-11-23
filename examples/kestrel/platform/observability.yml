@@ -1,0 +1,73 @@
+# Level 3 - observability for both regions. Icons from the Iconify API (mdi:…) are downloaded
+# the first time the diagram is built, then cached.
+id: observability
+name: Observability
+direction: right
+groups:
+  - id: grafana-stack
+    name: Grafana stack
+    icon: grafana
+    color: orange
+  - id: alerting
+    name: Alerting
+    icon: mdi:bell-ring
+    color: red
+nodes:
+  - id: collector
+    name: OTel gateway
+    icon: opentelemetry
+    description: Receives telemetry from the collectors of both clusters.
+  - id: prometheus
+    name: Prometheus
+    icon: prometheus
+    description: Metrics, 15 days, remote-written to long-term storage.
+    group: grafana-stack
+  - id: logs
+    name: Logs
+    icon: grafana
+    description: Loki, 30 days of logs.
+    group: grafana-stack
+  - id: traces
+    name: Traces
+    icon: grafana
+    description: Tempo, 7 days of traces.
+    group: grafana-stack
+  - id: dashboards
+    name: Dashboards
+    icon: grafana
+    group: grafana-stack
+    size: large
+  - id: alertmanager
+    name: Alertmanager
+    icon: prometheus
+    group: alerting
+  - id: runbooks
+    name: Runbooks
+    icon: mdi:book-open-variant
+    description: One runbook per alert, linked from every notification.
+    group: alerting
+    size: small
+connections:
+  - from: collector
+    to: prometheus
+    label: metrics
+  - from: collector
+    to: logs
+    label: logs
+  - from: collector
+    to: traces
+    label: traces
+  - from: prometheus
+    to: dashboards
+  - from: logs
+    to: dashboards
+  - from: traces
+    to: dashboards
+  - from: prometheus
+    to: alertmanager
+    label: rules
+    color: red
+  - from: alertmanager
+    to: runbooks
+    style: dotted
+    arrow: none
