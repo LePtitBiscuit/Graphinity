@@ -136,4 +136,8 @@ git ls-files -co --exclude-standard -z | xargs -0 grep -nI $'\xe2\x80\x94'   # m
 - Publish to npm, change the version or push a `v*` tag (it triggers the release workflow)
   without the maintainer's explicit approval.
 - Commit, push or create branches unless asked.
+- Commit changes you did not make. Several people or agents may work in the same working tree:
+  a commit holds only your own changes (stage your hunks, not whole files that others also
+  edited), and leaves the others' uncommitted changes untouched. If your change depends on
+  uncommitted work of someone else, ask before committing.
 - Add an editing feature, a backend, a database, or a CDN dependency in the viewer.
