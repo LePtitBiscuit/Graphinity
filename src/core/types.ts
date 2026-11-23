@@ -100,6 +100,10 @@ export interface ArchitectureEdge {
   style?: LineStyle
   /** Arrowheads (`end` when absent). */
   arrow?: ArrowHeads
+  /** `from` is a group of the universe (the connection attaches to its frame), not a node. */
+  fromGroup?: true
+  /** `to` is a group of the universe, not a node. */
+  toGroup?: true
   /** Side of the source node it leaves from (default: follows the universe's direction). */
   fromSide?: Side
   /** Side of the target node it enters (default: follows the universe's direction). */

@@ -15,7 +15,7 @@ If you make a mistake, the terminal prints the error:
 
 ```
 10:43:15 ✗ 1 error
-  architecture.yml:9:9 connections[0].to: Unknown node "api" (connections must reference nodes of the same universe)
+  architecture.yml:9:9 connections[0].to: Unknown node or group "api" (connections must reference nodes or groups of the same universe)
 ```
 
 The page keeps showing the diagram, without the element concerned (here, that connection), and

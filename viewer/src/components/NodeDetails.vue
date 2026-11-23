@@ -68,6 +68,7 @@ const iconText = computed(() => {
           >
             {{ connection.node.name }} <span class="label">({{ connection.external.universe }})</span>
           </button>
+          <span v-else-if="connection.group" class="group-end">{{ connection.node.name }} <span class="label">(group)</span></span>
           <button v-else type="button" class="link" @click="$emit('select', connection.node.id)">{{ connection.node.name }}</button>
           <span v-if="connection.label" class="label">{{ connection.label }}</span>
         </li>

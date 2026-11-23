@@ -556,6 +556,30 @@ describe('loadArchitecture - connections into sub-universes', () => {
   })
 })
 
+describe('loadArchitecture - connections to groups', () => {
+  it('normalizes group ends, also next to a path into a sub-universe', async () => {
+    const dir = await project({
+      'root.yml': `id: root
+name: Root
+groups: [{ id: office, name: Office }]
+nodes:
+  - { id: ci, name: CI, icon: x, group: office }
+  - { id: org, name: Org, icon: x, universe: org.yml }
+connections:
+  - { from: office, to: org }
+  - { from: { group: office, side: bottom }, to: org/api, label: deploy }
+`,
+      'org.yml': universe('org', '[{ id: api, name: API, icon: x }]'),
+    })
+    const result = await loadArchitecture(path.join(dir, 'root.yml'))
+    if (!result.ok) throw new Error(result.errors.map(formatConfigError).join('\n'))
+    expect(result.architecture.universes['root']!.edges).toEqual([
+      { id: 'e0', from: 'office', to: 'org', fromGroup: true },
+      { id: 'e1', from: 'office', to: 'org', toPath: ['api'], label: 'deploy', fromSide: 'bottom', fromGroup: true },
+    ])
+  })
+})
+
 describe('loadArchitecture - universe background', () => {
   it('resolves the background image like a local icon, and watches it', async () => {
     const dir = await project({

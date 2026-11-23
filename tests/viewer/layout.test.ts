@@ -12,7 +12,6 @@ import {
   TILE_SIZE,
   TILE_TOP,
   GROUP_HEADER,
-  type LaidOutNode,
   type Point,
   type Rect,
   type UniverseLayout,
@@ -25,12 +24,20 @@ function overlaps(a: Rect, b: Rect): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
 }
 
+/** The tile of a node (x and width across it), or a group frame, where connections attach. */
+interface Anchorable extends Rect {
+  tileTop: number
+  tileHeight: number
+  behind?: number
+}
+
 function checkLayout(layout: UniverseLayout, direction: Universe['direction'] = 'right'): void {
   const { nodes, edges } = layout
   for (const [i, a] of nodes.entries()) {
     for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.node.id} overlaps ${b.node.id}`).toBe(false)
   }
   const byId = new Map(nodes.map((n) => [n.node.id, n]))
+  const groupsById = new Map(layout.groups.map((g) => [g.group.id, g]))
   for (const edge of edges) {
     expect(edge.points.length).toBeGreaterThanOrEqual(2)
     // Orthogonal route: every segment is horizontal or vertical.
@@ -42,22 +49,29 @@ function checkLayout(layout: UniverseLayout, direction: Universe['direction'] = 
     // the top of the tile and out below the text at the bottom. On the sides set in the
     // configuration; otherwise on the sides the universe flows through (ELK's route), or on any
     // side when a direct route replaced a detour.
-    const source = byId.get(edge.from)!
-    const target = byId.get(edge.to)!
+    // A node, or a group frame (Vue Flow id `group:<id>`): connections attach to the whole frame.
+    const endOf = (id: string): Anchorable => {
+      const group = id.startsWith('group:') ? groupsById.get(id.slice('group:'.length)) : undefined
+      if (group) return { x: group.x, y: group.y, width: group.width, height: group.height, tileTop: 0, tileHeight: group.height }
+      const n = byId.get(id)!
+      const { tile, tileLeft } = nodeGeometry(n.node.size)
+      // A node that opens a universe: on the tile drawn behind it.
+      return { x: n.x + tileLeft, y: n.y, width: tile, height: n.height, tileTop: TILE_TOP, tileHeight: tile, behind: n.node.universe !== undefined ? BEHIND_OFFSET : 0 }
+    }
+    const source = endOf(edge.from)
+    const target = endOf(edge.to)
     const defaults = DEFAULT_SIDES[direction]
     // On a side of the tile, within its extent (several connections are spread along it).
-    const onSide = (n: LaidOutNode, point: Point | undefined, side: Side) => {
+    const onSide = (n: Anchorable, point: Point | undefined, side: Side) => {
       if (!point) return false
-      const { tile, tileLeft } = nodeGeometry(n.node.size)
-      const [left, top] = [n.x + tileLeft, n.y + TILE_TOP]
-      const acrossX = point.x >= left && point.x <= left + tile
-      const acrossY = point.y >= top && point.y <= top + tile
+      const [left, top] = [n.x, n.y + n.tileTop]
+      const acrossX = point.x >= left && point.x <= left + n.width
+      const acrossY = point.y >= top && point.y <= top + n.tileHeight
       switch (side) {
         case 'left':
           return point.x === left && acrossY
         case 'right':
-          // A node that opens a universe: on the tile drawn behind it.
-          return point.x === left + tile + (n.node.universe !== undefined ? BEHIND_OFFSET : 0) && acrossY
+          return point.x === left + n.width + (n.behind ?? 0) && acrossY
         case 'top':
           return point.y === top && acrossX
         case 'bottom':
@@ -65,7 +79,7 @@ function checkLayout(layout: UniverseLayout, direction: Universe['direction'] = 
       }
     }
     const sides: Side[] = ['left', 'right', 'top', 'bottom']
-    const isAnchor = (n: LaidOutNode, point: Point | undefined, side: Side | undefined) => (side ? [side] : sides).some((s) => onSide(n, point, s))
+    const isAnchor = (n: Anchorable, point: Point | undefined, side: Side | undefined) => (side ? [side] : sides).some((s) => onSide(n, point, s))
     expect(isAnchor(source, edge.points[0], edge.edge.fromSide), `${edge.id} start`).toBe(true)
     expect(isAnchor(target, edge.points.at(-1), edge.edge.toSide), `${edge.id} end`).toBe(true)
     // Off the flow's sides (and not set in the configuration): a direct route, at most 3 turns.
@@ -247,6 +261,53 @@ describe('layoutUniverse', async () => {
     // The label follows the route.
     const label = back.label!
     expect(label.x + label.width / 2 >= box.minX && label.x + label.width / 2 <= box.maxX).toBe(true)
+  })
+
+  it.each(['right', 'down', 'left', 'up'] as const)('connects nodes to groups and groups to groups: %s', async (direction) => {
+    const node = (id: string, group?: string) => ({ id, name: id, icon: { type: 'name' as const, name: 'x' }, ...(group && { group }) })
+    // `cdn` comes before `vpc` in the flow: the side of `vpc` facing away from the flow's end.
+    const side = direction === 'right' || direction === 'down' ? 'top' : 'bottom'
+    const universe: Universe = {
+      id: 'u',
+      name: 'U',
+      direction,
+      source: 'u.yml',
+      groups: [
+        { id: 'cloud', name: 'Cloud' },
+        { id: 'vpc', name: 'VPC', group: 'cloud' },
+        { id: 'onprem', name: 'On premises' },
+      ],
+      nodes: [node('users'), node('api', 'vpc'), node('db', 'vpc'), node('cdn', 'cloud'), node('backup', 'onprem'), node('audit')],
+      edges: [
+        { id: 'e0', from: 'users', to: 'cloud', toGroup: true, label: 'HTTPS' },
+        { id: 'e1', from: 'api', to: 'db' },
+        { id: 'e2', from: 'vpc', to: 'onprem', fromGroup: true, toGroup: true, label: 'VPN' },
+        { id: 'e3', from: 'onprem', to: 'audit', fromGroup: true },
+        { id: 'e4', from: 'cdn', to: 'vpc', toGroup: true, toSide: side },
+      ],
+    }
+    const layout = await layoutUniverse(universe, measure)
+    checkLayout(layout, direction)
+    expect(layout.edges.map((e) => [e.from, e.to])).toEqual([
+      ['users', 'group:cloud'],
+      ['api', 'db'],
+      ['group:vpc', 'group:onprem'],
+      ['group:onprem', 'audit'],
+      ['cdn', 'group:vpc'],
+    ])
+    // A connection to a group ends on its frame, outside the nodes it holds.
+    const frame = layout.groups.find((g) => g.group.id === 'vpc')!
+    const end = layout.edges.find((e) => e.id === 'e4')!.points.at(-1)!
+    expect(end.y).toBe(side === 'top' ? frame.y : frame.y + frame.height)
+    expect(end.x > frame.x && end.x < frame.x + frame.width).toBe(true)
+    // Nodes inside a group are no obstacle to the connections to it, but stay clear of the others.
+    for (const edge of layout.edges) {
+      for (const n of layout.nodes) {
+        if (n.node.id === edge.from || n.node.id === edge.to) continue
+        const inside = edge.points.slice(1, -1).some((p) => p.x > n.x && p.x < n.x + n.width && p.y > n.y && p.y < n.y + n.height)
+        expect(inside, `${edge.id} goes through ${n.node.id}`).toBe(false)
+      }
+    }
   })
 
   it('keeps labeled and unlabeled siblings in the same column', async () => {

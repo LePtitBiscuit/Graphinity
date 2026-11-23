@@ -2,7 +2,7 @@
 // Pure geometry: independent from Vue Flow so it can be unit-tested.
 import type { ELK, ElkExtendedEdge, ElkNode, ElkPort } from 'elkjs/lib/elk-api.js'
 import type { ArchitectureEdge, ArchitectureGroup, ArchitectureNode, Direction, NodeSize, Side, Universe } from '../../src/core/types.ts'
-import { edgeCrossings, overlaps, routeAll } from './route.ts'
+import { edgeCrossings, overlaps, routeAll, shiftOf, type NodeBox } from './route.ts'
 
 // A node is a square tile (the icon) with its name and description below it. Its layout box also
 // keeps room around the tile for the corner tags. These are the sizes of a `medium` node; see
@@ -82,9 +82,10 @@ export interface LaidOutEdge {
   /** The connection as configured (style, color, arrowheads). */
   edge: ArchitectureEdge
   id: string
+  /** Vue Flow ids of its ends: a node id, or `groupFlowId(id)` for a group (`endOf`). */
   from: string
   to: string
-  /** Start point, bend points, end point (from the side of the source tile to the target's). */
+  /** Start point, bend points, end point (from the side of the source tile, or frame, to the target's). */
   points: Point[]
   label?: Rect & { text: string }
 }
@@ -135,12 +136,23 @@ const elk: Promise<ELK> = import('elkjs/lib/elk.bundled.js').then(
   (module) => new (module.default as unknown as new () => ELK)(),
 )
 
+/** Vue Flow id of a group (node ids cannot contain ":"). */
+export const groupFlowId = (id: string) => `group:${id}`
+
+/** Vue Flow id of an end of a connection: the node, or the group (`fromGroup`, `toGroup`). */
+export function endOf(edge: ArchitectureEdge, end: 'from' | 'to'): string {
+  return end === 'from' ? (edge.fromGroup ? groupFlowId(edge.from) : edge.from) : edge.toGroup ? groupFlowId(edge.to) : edge.to
+}
+
 // ELK ids share one namespace: prefix them so node, group and edge ids cannot collide.
 const nodeKey = (id: string) => `n:${id}`
 const groupKey = (id: string) => `g:${id}`
 const edgeKey = (id: string) => `e:${id}`
 /** One port per node and side, shared by the connections that use it (first pass). */
 const portKey = (id: string, side: Side) => `n:${id}:${side}`
+/** The ELK shape of an end of a connection. */
+const shapeKey = (edge: ArchitectureEdge, end: 'from' | 'to') =>
+  (end === 'from' ? edge.fromGroup : edge.toGroup) ? groupKey(end === 'from' ? edge.from : edge.to) : nodeKey(end === 'from' ? edge.from : edge.to)
 /** One port per connection end (second pass). */
 const endKey = (edgeId: string, end: 'from' | 'to') => `p:${edgeId}:${end}`
 /** A side of a node, as a map key. */
@@ -162,11 +174,12 @@ function spreadPorts(universe: Universe, ends: readonly { from: Side; to: Side }
   const bySide = new Map<string, { key: string; other: Point; index: number }[]>()
   universe.edges.forEach((edge, index) => {
     for (const end of ['from', 'to'] as const) {
+      // A group has no ports (see `build`).
+      if (end === 'from' ? edge.fromGroup : edge.toGroup) continue
       const node = end === 'from' ? edge.from : edge.to
-      const other = end === 'from' ? edge.to : edge.from
       const side = ends[index]![end]
       const list = bySide.get(sideKey(node, side)) ?? []
-      list.push({ key: endKey(edge.id, end), other: centerOf(shapes.get(nodeKey(other))), index })
+      list.push({ key: endKey(edge.id, end), other: centerOf(shapes.get(shapeKey(edge, end === 'from' ? 'to' : 'from'))), index })
       bySide.set(sideKey(node, side), list)
     }
   })
@@ -247,6 +260,7 @@ export interface LayoutOptions {
 export async function layoutUniverse(universe: Universe, measureText: MeasureText, options: LayoutOptions = {}): Promise<UniverseLayout> {
   const direction = universe.direction
   const defaults = DEFAULT_SIDES[direction] ?? DEFAULT_SIDES.right
+  const groups = new Map(universe.groups.map((group) => [group.id, group]))
   const heights = new Map(universe.nodes.map((node) => [node.id, nodeHeight(node, measureText)]))
   const geometries = new Map(
     universe.nodes.map((node) => [node.id, { ...nodeGeometry(node.size), ...(node.universe !== undefined && { behind: BEHIND_OFFSET }) }]),
@@ -255,8 +269,8 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
   const sides = new Map<string, Set<Side>>(universe.nodes.map((node) => [node.id, new Set([defaults.in, defaults.out])]))
   const ends = universe.edges.map((edge) => ({ from: edge.fromSide ?? defaults.out, to: edge.toSide ?? defaults.in }))
   universe.edges.forEach((edge, index) => {
-    sides.get(edge.from)?.add(ends[index]!.from)
-    sides.get(edge.to)?.add(ends[index]!.to)
+    if (!edge.fromGroup) sides.get(edge.from)?.add(ends[index]!.from)
+    if (!edge.toGroup) sides.get(edge.to)?.add(ends[index]!.to)
   })
 
   const labels = universe.edges.map((edge) =>
@@ -325,12 +339,15 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
       },
       children: rootChildren,
       edges: [
-        ...universe.edges.map((edge, index) => ({
-          id: edgeKey(edge.id),
-          sources: [pass.ports ? endKey(edge.id, 'from') : portKey(edge.from, ends[index]!.from)],
-          targets: [pass.ports ? endKey(edge.id, 'to') : portKey(edge.to, ends[index]!.to)],
-          labels: [labels[index]!],
-        })),
+        ...universe.edges.map((edge, index) => {
+          // A connection to a group attaches to the group itself, without a port: ELK (0.12) fails
+          // on ports of groups inside groups in vertical flows, and the sides are drawn by routeAll.
+          const port = (end: 'from' | 'to') => {
+            const [id, group, side] = end === 'from' ? [edge.from, edge.fromGroup, ends[index]!.from] : [edge.to, edge.toGroup, ends[index]!.to]
+            return group ? groupKey(id) : pass.ports ? endKey(edge.id, end) : portKey(id, side)
+          }
+          return { id: edgeKey(edge.id), sources: [port('from')], targets: [port('to')], labels: [labels[index]!] }
+        }),
         // `after`: an invisible connection from that node, so that this one comes later in the flow.
         ...universe.nodes.flatMap((node) =>
           node.after !== undefined && heights.has(node.after) ? [{ id: hiddenKey(node.id), sources: [nodeKey(node.after)], targets: [nodeKey(node.id)] }] : [],
@@ -339,7 +356,6 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
     }
   }
 
-  const groups = new Map(universe.groups.map((group) => [group.id, group]))
   const shapes = new Map<string, ElkNode>()
   const routes = new Map<string, ElkExtendedEdge>()
   const collect = (shape: ElkNode) => {
@@ -362,25 +378,24 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
     const laid = shapes.get(nodeKey(node.id))
     return { node, x: laid?.x ?? 0, y: laid?.y ?? 0, width: geometries.get(node.id)!.width, height: heights.get(node.id)! }
   })
-  const boxes = new Map(laidNodes.map((laid) => [laid.node.id, { ...laid, ...geometries.get(laid.node.id)! }]))
+  const laidGroups: LaidOutGroup[] = universe.groups.flatMap((group) => {
+    const laid = shapes.get(groupKey(group.id))
+    return laid ? [{ group, x: laid.x ?? 0, y: laid.y ?? 0, width: laid.width ?? 0, height: laid.height ?? 0 }] : []
+  })
+  const boxes = new Map<string, NodeBox>([
+    ...laidNodes.map((laid) => [laid.node.id, { ...laid, ...geometries.get(laid.node.id)! }] as const),
+    ...laidGroups.map((laid) => [groupFlowId(laid.group.id), frameBox(laid)] as const),
+  ])
 
   return {
     // Outer groups first (Vue Flow needs parents before their children, and draws them below).
-    groups: universe.groups
-      .flatMap((group) => {
-        const laid = shapes.get(groupKey(group.id))
-        return laid ? [{ group, x: laid.x ?? 0, y: laid.y ?? 0, width: laid.width ?? 0, height: laid.height ?? 0 }] : []
-      })
-      .sort((a, b) => groupDepth(a.group, groups) - groupDepth(b.group, groups)),
+    groups: [...laidGroups].sort((a, b) => groupDepth(a.group, groups) - groupDepth(b.group, groups)),
     nodes: laidNodes,
     edges: reroute(
       elkEdges(universe, routes, ends, geometries),
       boxes,
       defaults,
-      universe.groups.flatMap((group) => {
-        const laid = shapes.get(groupKey(group.id))
-        return laid ? [groupTitle({ x: laid.x ?? 0, y: laid.y ?? 0, width: laid.width ?? 0, height: laid.height ?? 0 }, group.name)] : []
-      }),
+      laidGroups.map((laid) => groupTitle(laid, laid.group.name)),
     ),
   }
 }
@@ -393,9 +408,15 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
  * to itself, and when every simple route would go through a node; all of ELK's routes stay when
  * they are less tangled (`tangle`) than the new ones.
  */
+/** A group frame as an end of connections (route.ts): they attach to its border. */
+export function frameBox(rect: Rect): NodeBox {
+  const { x, y, width, height } = rect
+  return { x, y, width, height, tile: width, tileHeight: height, tileLeft: 0, tileTop: 0, frame: true }
+}
+
 function reroute(
   edges: LaidOutEdge[],
-  boxes: ReadonlyMap<string, Rect & NodeGeometry>,
+  boxes: ReadonlyMap<string, NodeBox>,
   flow: { out: Side; in: Side },
   /** Group titles, kept clear of labels. */
   headers: readonly Rect[],
@@ -420,8 +441,23 @@ function reroute(
     const label = laid.label && route.label && { ...laid.label, x: route.label.x - laid.label.width / 2, y: route.label.y - laid.label.height / 2 }
     return { ...laid, points: route.points, ...(label && { label }) }
   })
-  // Never worse than ELK: its routes stay when they cross and overlap each other less.
-  return tangle(rerouted) <= tangle(edges) ? rerouted : edges
+  // Never worse than ELK: its routes stay when they cross and overlap each other less, and keep
+  // the sides set in the configuration (ELK chooses the sides of groups itself).
+  return tangle(rerouted) <= tangle(edges) || !edges.every((laid) => keepsGroupSides(laid, boxes)) ? rerouted : edges
+}
+
+/** Does an ELK route leave and enter the groups at its ends by the sides set in the configuration? */
+function keepsGroupSides(laid: LaidOutEdge, boxes: ReadonlyMap<string, NodeBox>): boolean {
+  const { edge, points } = laid
+  if (points.length < 2) return true
+  for (const [group, side, point, id] of [
+    [edge.fromGroup, edge.fromSide, points[0]!, laid.from],
+    [edge.toGroup, edge.toSide, points.at(-1)!, laid.to],
+  ] as const) {
+    const box = boxes.get(id)
+    if (group && side && box && shiftOf(point, box).side !== side) return false
+  }
+  return true
 }
 
 /** How tangled the connections are: crossings and segments drawn on top of each other, then turns, tiny steps and length. */
@@ -454,17 +490,18 @@ function elkEdges(
     const laid = routes.get(edgeKey(edge.id))
     const section = laid?.sections?.[0]
     const points = section ? [section.startPoint, ...(section.bendPoints ?? []), section.endPoint] : []
+    // Ends on a node move to its tile; ends on a group stay on its frame.
     if (points.length >= 2) {
       const { from, to } = ends[index]!
-      points[0] = toTile(points[0]!, from, geometries.get(edge.from) ?? nodeGeometry(undefined))
-      points[points.length - 1] = toTile(points[points.length - 1]!, to, geometries.get(edge.to) ?? nodeGeometry(undefined))
+      if (!edge.fromGroup) points[0] = toTile(points[0]!, from, geometries.get(edge.from) ?? nodeGeometry(undefined))
+      if (!edge.toGroup) points[points.length - 1] = toTile(points[points.length - 1]!, to, geometries.get(edge.to) ?? nodeGeometry(undefined))
     }
     const label = laid?.labels?.[0]
     return {
       edge,
       id: edge.id,
-      from: edge.from,
-      to: edge.to,
+      from: endOf(edge, 'from'),
+      to: endOf(edge, 'to'),
       points: points.map(({ x, y }) => ({ x, y })),
       ...(edge.label &&
         label && {

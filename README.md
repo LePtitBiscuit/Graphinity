@@ -200,7 +200,7 @@ kestrel/                        ← project directory (the root file's directory
 | File                             | Role |
 | -------------------------------- | ---- |
 | `architecture.yml`               | Root universe *Kestrel Logistics*, left to right on a custom dark background: the people (customers, merchants, couriers, in a dotted blue group), Kestrel's own systems in an orange group (each opens a level-2 universe; the large *Kestrel Platform* node has a tint and corner tags) and third-party services (Stripe, Sentry, PagerDuty, Slack) in a dashed group without background. Its connections reach deep into the sub-universes by path (`edge/cdn`, `platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`). |
-| `edge/edge.yml`                  | *Edge network*: DNS, CDN, WAF, API gateway and two load balancers, in groups nested inside a *Cloudflare* group. A leaf. |
+| `edge/edge.yml`                  | *Edge network*: DNS, CDN, WAF, API gateway and two load balancers, in groups nested inside a *Cloudflare* group; a connection leaves the bottom of the *Cloudflare* group for Logpush (group → node). A leaf. |
 | `platform/platform.yml`          | *Kestrel Platform*, top to bottom: the two regions (`eu-west`, `us-east`) and the shared services (observability, Vault, registry, object storage). A connection comes from two levels down (`eu-west/checkout/db/primary`). |
 | `platform/clusters/eu-west.yml`  | *eu-west-1 cluster*, over the grid: groups nested on the maximum of 4 levels (cluster › applications › commerce namespace › checkout node pool); its nodes `catalog`, `checkout` and `routing` open the service files. |
 | `platform/clusters/us-east.yml`  | *us-east-1 cluster*, with a tinted grid: a smaller copy whose `checkout` node opens the same `checkout.yml` as eu-west. |
@@ -210,9 +210,9 @@ kestrel/                        ← project directory (the root file's directory
 | `platform/services/routing.yml`  | *Routing service*, drawn right to left: planning and live tracking. A leaf. |
 | `data/data.yml`                  | *Data platform*, on its own background color and grid: streaming, lakehouse and analytics; its `kafka` node opens `kafka.json`, and its `notebooks` node comes after the dbt models (`after: dbt`). |
 | `data/kafka.json`                | *Kafka cluster*, written in JSON, top to bottom: brokers, topics, schema registry. A leaf. |
-| `data/orders-db.yml`             | *Orders database*, level 5, bottom to top: PgBouncer, a Patroni cluster with nested replicas, etcd and backups. A leaf. |
+| `data/orders-db.yml`             | *Orders database*, level 5, bottom to top: PgBouncer, a Patroni cluster with nested replicas, etcd and backups; the backups bootstrap the *Replicas* group (node → group). A leaf. |
 | `warehouses/warehouses.yml`      | *Warehouse network*: Lyon opens `lyon.yml`, Rotterdam opens `rotterdam.yml`, Newark opens nothing yet (tag *opens 2027*); a connection links two sub-universes (`rotterdam/restock` → `lyon/wms`). |
-| `warehouses/lyon.yml`            | *Lyon hub*, bottom to top over a floor plan (`background.image`, blurred), with frosted groups and warehouse-floor icons from the Iconify API (`mdi:barcode-scan`, `mdi:printer`, …). A leaf. |
+| `warehouses/lyon.yml`            | *Lyon hub*, bottom to top over a floor plan (`background.image`, blurred), with frosted groups and warehouse-floor icons from the Iconify API (`mdi:barcode-scan`, `mdi:printer`, …); a Wi-Fi connection links two groups (group → group). A leaf. |
 | `warehouses/rotterdam.yml`       | *Rotterdam returns centre*, top to bottom: intake, then the outcomes of grading. A leaf. |
 | `delivery/delivery.yml`          | *Software delivery*: GitHub, CI, Argo CD, Terraform, with icons of the bundled collections (`devicon:docker`, `vscode-icons:file-type-terraform`). A leaf. |
 | `images/*`                       | The background image of the Lyon hub, referenced by a relative path from `lyon.yml`. |
@@ -496,12 +496,13 @@ connections:
 
 ### Connection
 
-An arrow from one node to another, in the same universe (or inside one of its sub-universes).
+An arrow from one node or group to another, in the same universe (or inside one of its
+sub-universes).
 
 | Field   | Type | Required | Description |
 | ------- | ---- | -------- | ----------- |
-| `from`  | id or path, or `{ node, side }` | yes | The source node; `side` chooses where the connection leaves it. |
-| `to`    | id or path, or `{ node, side }` | yes | The target node (may be `from` itself); `side` chooses where it enters. |
+| `from`  | id or path, or `{ node, side }` / `{ group, side }` | yes | The source node or group; `side` chooses where the connection leaves it. |
+| `to`    | id or path, or `{ node, side }` / `{ group, side }` | yes | The target node or group (a node may be `from` itself); `side` chooses where it enters. |
 | `label` | text | no       | Shown on the connection. Max 200 characters. |
 | `color` | [color](#colors) | no | Color of the line and its arrowheads. |
 | `style` | `solid`, `dashed` or `dotted` | no | Line pattern. Default `solid`. |
@@ -528,6 +529,33 @@ connections:
 By default, a connection leaves and enters nodes on the sides the universe flows through
 (`direction`). `side` - `left`, `right`, `top` or `bottom` - chooses another one, even against
 the flow; it is kept when nodes are dragged. An invalid side falls back to the default.
+
+An end can also be a **group** of the universe: the connection then attaches to the group's
+frame, from a node to a group, a group to a node or a group to another group. A plain id names
+the node with that id, or the group when no node has it; `{ group: <id> }` always names the
+group (use it when a node and a group share an id). A group cannot be connected to itself nor
+to a node or group inside it, and a path cannot go through a group (`cloud/api` is an error:
+groups do not open universes). In the sub-universes, a group of an ancestor connected by path
+(`{ group: office }` → `org/api`) appears as a door, like a node.
+
+```yaml
+groups:
+  - { id: cloudflare, name: Cloudflare }
+  - { id: onprem, name: On premises }
+nodes:
+  - { id: visitors, name: Visitors, icon: googlechrome }
+  - { id: cdn, name: CDN, icon: cloudflare, group: cloudflare }
+  - { id: db, name: Database, icon: postgresql, group: onprem }
+  - { id: logs, name: Logs, icon: grafana }
+connections:
+  - from: visitors
+    to: cloudflare                        # node → group
+  - from: cloudflare
+    to: onprem                            # group → group
+    label: tunnel
+  - from: { group: cloudflare, side: bottom }
+    to: logs                              # group → node, leaving the bottom of the frame
+```
 
 ```yaml
 connections:
@@ -654,8 +682,10 @@ What is checked:
 - **Fields**: required fields present, known fields only, right types, lengths within limits.
 - **Identifiers**: valid ids; universe ids unique in the project; node and group ids unique in
   their universe.
-- **References**: connections point to nodes of the same universe (or, by path, of the
-  universes they open); `group` points to a declared
+- **References**: connections point to nodes or groups of the same universe (or, by path, to
+  nodes of the universes they open); a group end is not linked to itself nor to what is inside
+  it (`Group "cloud" holds node "api": a connection cannot link a group to what is inside it`);
+  `group` points to a declared
   group; every group has at least one node (directly or in a group inside it); groups nest as a
   tree of at most 4 levels (no group inside itself, no cycle); at most 4 tags, one per corner;
   a node has at most one placement hint (`place` or `after`), `after` names another node of the
@@ -708,7 +738,9 @@ opened, with these rules.
   preferring the sides the universe flows through - for horizontal flows the sides of the tile,
   for vertical flows the top of the tile and **below the text**, so they never cross a name -
   but taking another side when it is clearly shorter (a connection back to a door, for
-  example). A connection that sets its own `side` keeps it. Each route avoids crossing the other
+  example). A connection that sets its own `side` keeps it. A connection to a **group** attaches
+  to its frame (in the middle of the side, or spread along it) and runs over neither the frame's
+  inside nor the nodes it holds; the other connections still cross frames freely. Each route avoids crossing the other
   connections and running along them or over a group's title. A single connection on a side
   attaches in its middle; connections sharing a side each get their own point, spread evenly
   along the tile and ordered by the way they turn after leaving it (the one turning closest to
@@ -737,7 +769,7 @@ One universe is shown at a time.
 | Double-click a doubled node | Opens its universe (also *Open* in the details panel). |
 | Breadcrumb                     | Goes back to any parent level. |
 | Back button (top left)         | Goes up one level. |
-| Drag a node or a group         | Moves it. A group moves with its nodes; a node stays inside its group. All the connections are then drawn again together, as in the first view: around the other nodes, spread along the sides, side by side where they share a corridor (sides set in the files are kept). Not saved: the computed layout comes back when the universe is reopened or a file changes. |
+| Drag a node or a group         | Moves it. A group moves with its nodes (and the connections to its frame); a node stays inside its group. All the connections are then drawn again together, as in the first view: around the other nodes, spread along the sides, side by side where they share a corridor (sides set in the files are kept). Not saved: the computed layout comes back when the universe is reopened or a file changes. |
 | Drag the canvas, scroll        | Pans, zooms. The bottom-left buttons zoom and fit the universe to the screen. |
 | Grid button (bottom left)      | Shows or hides the grid of the universe for the session (not saved; the default comes from `background.grid`). |
 | Keep scrolling up at maximum zoom | An *Opening …* bar fills with the amount scrolled (about five notches of the wheel) while the diagram moves towards the node; then its universe opens. It is the doubled node closest to the mouse cursor (the one under it, if any; the only one, wherever the cursor is, when a single node opens a universe); moving the cursor to another node starts over for that one. Stopping cancels it. |

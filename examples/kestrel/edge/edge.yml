@@ -48,6 +48,11 @@ nodes:
     group: balancing
     tags: [failover]
     border: dashed
+  - id: logpush
+    name: Logpush
+    icon: cloudflare
+    description: Request logs of every Cloudflare product, pushed to the data platform.
+    size: small
 connections:
   - from: dns
     to: cdn
@@ -67,3 +72,9 @@ connections:
     label: health-checked failover
     style: dashed
     color: yellow
+  # A connection from a group: it leaves the frame of the Cloudflare group, by its bottom side.
+  - from: { group: cloudflare, side: bottom }
+    to: logpush
+    label: request logs
+    style: dotted
+    color: gray

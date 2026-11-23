@@ -11,7 +11,7 @@ levels, linked by `universe` fields:
 | File | Universe | Links |
 | ---- | -------- | ----- |
 | `architecture.yml` | `kestrel` (root, left to right, custom background; paths deep into the sub-universes: `edge/cdn`, `platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`, `platform/observability/alertmanager`) | `edge`, `platform`, `data`, `warehouses`, `delivery` → their folder's file |
-| `edge/edge.yml` | `edge` (groups inside a `cloudflare` group) | none (leaf) |
+| `edge/edge.yml` | `edge` (groups inside a `cloudflare` group; a connection from that group, `side: bottom`, to `logpush`) | none (leaf) |
 | `platform/platform.yml` | `platform` (top to bottom; paths two levels down: `eu-west/checkout/db/primary`, `eu-west/checkout/db/backup`) | `eu-west`, `us-east` → `clusters/*.yml`; `observability` → `observability.yml` |
 | `platform/clusters/eu-west.yml` | `eu-west` (grid, groups nested on the maximum of 4 levels) | `catalog`, `checkout`, `routing` → `../services/*.yml` |
 | `platform/clusters/us-east.yml` | `us-east` (tinted grid) | `checkout` → `../services/checkout.yml` (the same file as eu-west) |
@@ -21,9 +21,9 @@ levels, linked by `universe` fields:
 | `platform/services/routing.yml` | `routing` (right to left) | none (leaf) |
 | `data/data.yml` | `data` (custom background color and grid; placement hint `after: dbt` on `notebooks`) | `kafka` → `kafka.json` |
 | `data/kafka.json` | `kafka` (JSON, top to bottom) | none (leaf) |
-| `data/orders-db.yml` | `orders-db` (level 5, bottom to top, nested groups) | none (leaf) |
+| `data/orders-db.yml` | `orders-db` (level 5, bottom to top, nested groups; `backup` → the `replicas` group) | none (leaf) |
 | `warehouses/warehouses.yml` | `warehouses` (path between two sub-universes: `rotterdam/restock` → `lyon/wms`) | `lyon` → `lyon.yml`, `rotterdam` → `rotterdam.yml`; `newark` opens nothing |
-| `warehouses/lyon.yml` | `lyon-hub` (bottom to top, background image, frosted groups, `mdi:` icons) | none (leaf) |
+| `warehouses/lyon.yml` | `lyon-hub` (bottom to top, background image, frosted groups, `mdi:` icons; a connection between the `floor` and `site-it` groups) | none (leaf) |
 | `warehouses/rotterdam.yml` | `rotterdam-returns` (top to bottom) | none (leaf) |
 | `delivery/delivery.yml` | `delivery` (bundled collections: `devicon:`, `vscode-icons:`) | none (leaf) |
 | `images/` | `floor-plan.svg`, background image of the Lyon hub (the only local image) | |

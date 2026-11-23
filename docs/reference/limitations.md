@@ -22,6 +22,10 @@ implementation, not a hidden feature.
   ([path](/config/connection#connecting-to-a-sub-universe) `checkout/api`, up to 8 levels), never a
   node of a parent or of an unrelated universe.
 - **Groups nest up to 4 levels**, and a node (or a group) belongs to one group at most.
+- **Groups as connection ends stay in their universe.** A connection can link groups of the
+  universe that declares it, but a [path](/config/connection#connecting-to-a-sub-universe) ends
+  on a node: `checkout/workers` cannot name a group of the checkout universe. A group cannot be
+  connected to itself nor to what is inside it.
 - **No choice of the point along a side.** A connection can choose the
   [side](/config/connection#ends-and-sides) of a node, not a position along it: the connections
   that share a side are spread along it automatically.
@@ -50,7 +54,9 @@ implementation, not a hidden feature.
 - **Dragged positions are not kept**: reopening a universe or changing a file brings back the
   computed layout.
 - Connection routes have a few turns at most: when none of them avoids every node, the layout's
-  own route is kept (or, after a drag, the shortest route even if it crosses a node). Many
+  own route is kept (or, after a drag, the shortest route even if it crosses a node). For a
+  connection to a group, that route may attach to another side of the frame than the configured
+  `side`. Many
   connections between the same areas are drawn side by side, which takes room. Routes avoid
   crossings and group titles as far as their few shapes allow: after a drag, some crossings,
   or a line over a title, can remain. When no free place is left, a label may cover another

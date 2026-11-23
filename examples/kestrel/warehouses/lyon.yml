@@ -96,3 +96,8 @@ connections:
     to: wms
     label: restock
     color: yellow
+  # Between two groups: every floor device reaches the site IT over the warehouse Wi-Fi.
+  - from: floor
+    to: site-it
+    label: Wi-Fi
+    style: dotted

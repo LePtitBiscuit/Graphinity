@@ -16,7 +16,7 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
   behind them.
 - **Connections** with right angles, arrowheads and labels, in their configured color and style.
   Connections that share a side of a node attach at their own points, spread along that side of
-  the tile.
+  the tile. A connection to a group attaches to the group's frame.
 - **Controls** at the bottom left: zoom in, zoom out, fit the universe to the screen, show or
   hide the grid.
 
@@ -27,12 +27,12 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
 | Click a node | Opens the details panel (top right). |
 | Double-click a doubled node | Opens its universe. |
 | *Open* in the details panel | Same as the double-click. |
-| Click a connection in the details | Selects the node at the other end, or, when that end is a node of a parent universe, goes back there. |
+| Click a connection in the details | Selects the node at the other end, or, when that end is a node of a parent universe, goes back there. A group at the other end is listed as `Name (group)`, without a link. |
 | Breadcrumb (top left) | Goes back to any parent level. |
 | Back button | Goes up one level (disabled at the root). |
 | `Esc`, click on the canvas or a group | Closes the details panel. |
 | Drag a node | Moves it; it cannot leave its group. |
-| Drag a group | Moves the group with its nodes. |
+| Drag a group | Moves the group with its nodes; the connections to its frame follow. |
 | Drag the canvas, scroll | Pan, zoom. |
 | Scroll on, at maximum zoom | An *Opening …* bar fills with the amount scrolled (about five notches of the wheel), while the diagram moves towards the node and fades; then the universe of the doubled node closest to the mouse cursor opens: the node under the cursor, otherwise the nearest one (the only one, wherever the cursor is, if there is just one). Moving the cursor to another node starts the bar over for it. |
 | Scroll on, zoomed out a little beyond the whole universe | A *Back to …* bar fills (about five notches) while the diagram moves away; then the parent comes back. |

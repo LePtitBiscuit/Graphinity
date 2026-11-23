@@ -6,7 +6,9 @@ import type { InjectionKey, Ref } from 'vue'
 import type { ArchitectureGroup, ArchitectureNode, Direction, IconRef, ViewerIcon } from '../../src/core/types.ts'
 import type { Portal } from './context.ts'
 import type { Hold } from './gestures.ts'
-import type { LaidOutEdge, UniverseLayout } from './layout.ts'
+import { groupFlowId, type LaidOutEdge, type UniverseLayout } from './layout.ts'
+
+export { groupFlowId }
 
 export type ServiceFlowNode = Node<{ node: ArchitectureNode; logo?: ViewerIcon; direction: Direction }, 'service'>
 export type GroupFlowNode = Node<{ group: ArchitectureGroup; logo?: ViewerIcon }, 'cluster'>
@@ -16,7 +18,7 @@ export type FlowNode = ServiceFlowNode | GroupFlowNode | PortalFlowNode
 export type RoutedFlowEdge = Edge<
   Pick<LaidOutEdge, 'points' | 'label'> &
     Pick<LaidOutEdge['edge'], 'color' | 'style' | 'fromSide' | 'toSide'> & {
-    /** Laid-out positions of the source and target nodes, to tell when they have been moved. */
+    /** Laid-out positions of the source and target nodes (or groups), to tell when they have been moved. */
     sourceOrigin: XYPosition
     targetOrigin: XYPosition
   },
@@ -28,9 +30,6 @@ export const GESTURE: InjectionKey<Readonly<Ref<Hold | undefined>>> = Symbol('ge
 
 /** Id of the node whose details are shown (selection is ours, not Vue Flow's). */
 export const SELECTED_NODE: InjectionKey<Readonly<Ref<string | undefined>>> = Symbol('selected-node')
-
-/** Vue Flow id of a group (node ids cannot contain ":"). */
-export const groupFlowId = (id: string) => `group:${id}`
 
 /** Arrowhead; without a color it follows the theme (`--xy-edge-stroke`). */
 const arrow = (color: string | undefined) => ({ type: MarkerType.ArrowClosed, width: 16, height: 16, ...(color && { color }) })
@@ -51,7 +50,11 @@ export function toFlow(
 ): { nodes: FlowNode[]; edges: RoutedFlowEdge[] } {
   const logoOf = (icon: IconRef | undefined) => (icon?.type === 'name' ? icons[icon.name] : undefined)
   const groupOrigins = new Map(layout.groups.map(({ group, x, y }) => [group.id, { x, y }]))
-  const origins = new Map(layout.nodes.map(({ node, x, y }) => [node.id, { x, y }]))
+  // By Vue Flow id: connection ends are nodes or groups.
+  const origins = new Map([
+    ...layout.nodes.map(({ node, x, y }) => [node.id, { x, y }] as const),
+    ...layout.groups.map(({ group, x, y }) => [groupFlowId(group.id), { x, y }] as const),
+  ])
 
   // Parents must come before their children (the layout lists outer groups first). A group
   // inside another one is positioned relative to it and stays inside its frame.

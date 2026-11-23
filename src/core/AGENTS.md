@@ -78,6 +78,15 @@ a collection that is not on Iconify, or to bundle one (offline).
 7. **README**: the reference table of the object, *Limits*, *Validation rules*, an example - and
    the example project if it helps.
 
+## Connections to groups
+
+An end may be a group of the universe: a plain id names the node with that id, or the group when
+no node has it; `{ group }` always names the group (`schema.ts` `readEnd`, `KnownEnds`). The raw
+and normalized edges carry `fromGroup`/`toGroup`; `from`/`to` are then group ids. `checkGroupEnds`
+rejects a group linked to itself or to a node or group inside it; a path cannot start at a group
+and always ends on a node. Empty groups are dropped before the connections are read, so a
+connection to a group that is not shown is left out without another error.
+
 ## Connections into sub-universes
 
 An end may be a path (`checkout/api`): `schema.ts` checks its syntax and that the first node opens a

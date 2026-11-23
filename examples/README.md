@@ -38,7 +38,8 @@ collections (`mdi:warehouse`, `mdi:bell-ring`, `fluent-emoji-flat:eagle`… - do
 Iconify API the first time the diagram is built, then cached), a background image - its only
 local image file - (`images/floor-plan.svg`, in the Lyon hub), custom background colors and grids, colored, dashed, dotted and frosted groups
 nested up to 4 levels, corner tags, all four directions, styled connections (colors, dashes,
-arrowheads, sides), connections that reach several levels down by path
+arrowheads, sides), connections to and from groups (`edge/edge.yml`: group → node,
+`data/orders-db.yml`: node → group, `warehouses/lyon.yml`: group → group), connections that reach several levels down by path
 (`platform/eu-west/checkout/api`, `warehouses/lyon/wms`) and node placement hints (`place: last`
 on the image resizer of `platform/services/catalog.yml`, `after: dbt` on the notebooks of
 `data/data.yml`).

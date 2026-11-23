@@ -57,6 +57,8 @@ await writeFile(
     'connections:',
     '  - { from: { node: server, side: top }, to: db }',
     '  - { from: repo, to: cluster/worker, label: deploy }',
+    // A connection to a group (its frame).
+    '  - { from: badge, to: data, label: sync }',
     '',
   ].join('\n'),
 )

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // A group: a labelled frame drawn behind its nodes. Dragging it moves them along.
-import type { NodeProps } from '@xyflow/vue'
+import { Handle, Position, type NodeProps } from '@xyflow/vue'
 import { computed } from 'vue'
 import type { GroupFlowNode } from '../flow.ts'
 import { GROUP_HEADER } from '../layout.ts'
@@ -29,6 +29,9 @@ const frame = computed(() => {
       <NodeIcon v-if="data.group.icon" :icon="data.group.icon" :logo="data.logo" />
       <span class="name" :title="data.group.name">{{ data.group.name }}</span>
     </header>
+    <!-- Invisible anchors for the connections to the group (they draw their own route); not connectable. -->
+    <Handle type="target" :position="Position.Left" :connectable="false" class="anchor" />
+    <Handle type="source" :position="Position.Right" :connectable="false" class="anchor" />
   </div>
 </template>
 
@@ -65,6 +68,10 @@ header {
 header :deep(.icon) {
   width: 16px;
   height: 16px;
+}
+.anchor {
+  opacity: 0;
+  pointer-events: none;
 }
 .name {
   min-width: 0;

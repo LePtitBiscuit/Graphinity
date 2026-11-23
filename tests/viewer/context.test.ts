@@ -115,4 +115,31 @@ describe('universeContext', () => {
       { edgeId: 'ctx:1:e0', direction: 'in', node: arch.universes['org']!.nodes[0], label: 'deploy', external: { universe: 'ORG', level: 1 } },
     ])
   })
+
+  it('shows a group connected higher up as a door with its name and icon', () => {
+    const arch = architecture([], [
+      { from: 'backups', fromGroup: true, to: 'vps', toPath: ['db'] },
+      { from: 'vps', to: 'backups', toGroup: true },
+    ])
+    arch.universes['org']!.groups = [{ id: 'backups', name: 'Backup site', icon: { type: 'name', name: 'y' } }]
+    const { portals, edges } = universeContext(arch, ['root', 'org', 'vps'])
+    expect(portals.map((p) => [p.id, p.role, p.group, p.node])).toEqual([
+      ['portal:1:group:backups', 'in', true, { id: 'backups', name: 'Backup site', icon: { type: 'name', name: 'y' } }],
+    ])
+    expect(edges).toEqual([{ id: 'ctx:1:e0', from: 'portal:1:group:backups', to: 'db' }])
+  })
+
+  it('lists the groups a node is connected to in its details', () => {
+    const arch = architecture([])
+    const org = arch.universes['org']!
+    org.groups = [{ id: 'ci', name: 'Pipelines' }]
+    org.edges = [
+      { id: 'e0', from: 'vps', to: 'ci', toGroup: true, label: 'logs' },
+      // The group `ci`, not the node `ci`.
+      { id: 'e1', from: 'ci', fromGroup: true, to: 'backups' },
+    ]
+    expect(connectionsOf(org, 'vps')).toEqual([{ edgeId: 'e0', direction: 'out', node: { id: 'ci', name: 'Pipelines' }, group: true, label: 'logs' }])
+    expect(connectionsOf(org, 'ci')).toEqual([])
+    expect(connectionsOf(org, 'backups')).toEqual([{ edgeId: 'e1', direction: 'in', node: { id: 'ci', name: 'Pipelines' }, group: true }])
+  })
 })

@@ -258,6 +258,9 @@ interface ArchitectureEdge {
   color?: Color
   style?: LineStyle // 'solid' | 'dashed' | 'dotted'
   arrow?: ArrowHeads // 'end' | 'start' | 'both' | 'none'
+  /** from / to is a group of the universe (the connection attaches to its frame), not a node. */
+  fromGroup?: true
+  toGroup?: true
   /** Configured sides ("from: { node, side }"); absent = default side. */
   fromSide?: Side // 'left' | 'right' | 'top' | 'bottom'
   toSide?: Side

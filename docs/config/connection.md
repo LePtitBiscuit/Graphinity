@@ -1,12 +1,12 @@
 # Connection
 
-An item of `connections`: an arrow between two nodes of the same universe, or to (or from) a node
-inside one of its [sub-universes](#connecting-to-a-sub-universe).
+An item of `connections`: an arrow between two nodes or [groups](#connecting-groups) of the same
+universe, or to (or from) a node inside one of its [sub-universes](#connecting-to-a-sub-universe).
 
 | Property | Type | Required | Default | Description |
 | -------- | ---- | -------- | ------- | ----------- |
-| `from`   | node id or [path](#connecting-to-a-sub-universe), or [end](#ends-and-sides) | **yes** | | Source node, in the same universe (or inside one of its sub-universes). |
-| `to`     | node id or [path](#connecting-to-a-sub-universe), or [end](#ends-and-sides) | **yes** | | Target node, in the same universe (may be `from` itself), or inside one of its sub-universes. |
+| `from`   | node or group id, [path](#connecting-to-a-sub-universe), or [end](#ends-and-sides) | **yes** | | Source node or group, in the same universe (or a node inside one of its sub-universes). |
+| `to`     | node or group id, [path](#connecting-to-a-sub-universe), or [end](#ends-and-sides) | **yes** | | Target node or group, in the same universe (a node may be `from` itself), or a node inside one of its sub-universes. |
 | `label`  | text, ≤ 200 characters | no | | Text drawn on the connection. |
 | `color`  | [color](/config/colors-and-styles#colors) | no | theme | Color of the line and of its arrowheads. |
 | `style`  | `solid` · `dashed` · `dotted` | no | `solid` | Line pattern. |
@@ -54,8 +54,9 @@ mapping:
 
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
-| `node`   | node id | **yes** | The node. |
-| `side`   | `left` · `right` · `top` · `bottom` | no | Side of the node where the connection attaches. Default: the side of the flow. |
+| `node`   | node id or [path](#connecting-to-a-sub-universe) | `node` or `group` | The node. |
+| `group`  | group id | `node` or `group` | The [group](#connecting-groups) (instead of a node). |
+| `side`   | `left` · `right` · `top` · `bottom` | no | Side of the node or group where the connection attaches. Default: the side of the flow. |
 
 ```yaml [architecture.yml]
 id: payments
@@ -89,6 +90,60 @@ connections:
 - The sides are kept when nodes are [moved](/concepts/layout#moving-nodes).
 - An invalid `side` is an error; the connection is drawn on the default side.
 
+## Connecting groups
+
+An end can be a [group](/config/group) of the universe: the connection attaches to the frame of
+the group. This links a node to a group, a group to a node, or a group to another group.
+
+```yaml [architecture.yml]
+id: hosting
+name: Hosting
+groups:
+  - id: cloudflare
+    name: Cloudflare
+    icon: cloudflare
+  - id: onprem
+    name: On premises
+nodes:
+  - id: visitors
+    name: Visitors
+    icon: googlechrome
+  - id: cdn
+    name: CDN
+    icon: cloudflare
+    group: cloudflare
+  - id: db
+    name: Database
+    icon: postgresql
+    group: onprem
+  - id: logs
+    name: Logs
+    icon: grafana
+connections:
+  - from: visitors
+    to: cloudflare                 # node → group
+  - from: cloudflare
+    to: onprem                     # group → group
+    label: tunnel
+  - from: { group: cloudflare, side: bottom }
+    to: logs                       # group → node, from the bottom of the frame
+```
+
+- A plain id names the **node** with that id, or the **group** when no node has it. Write
+  `{ group: <id> }` to name the group whatever the nodes are called (a node and a group may share
+  an id).
+- The connection attaches to the border of the frame: in the middle of the side, or spread along
+  it when several connections share that side. `side` chooses the side, as for a node.
+- A group cannot be connected to itself
+  (`A group cannot be connected to itself ("cloudflare")`), nor to a node or a group inside it
+  (`Group "cloudflare" holds node "cdn": a connection cannot link a group to what is inside it`).
+- A path cannot go through a group (`Group "cloudflare" does not open a universe ("cloudflare/cdn")`),
+  and a path into a sub-universe ends on a node, not on a group of that universe. The other end of
+  a connection to a group may be a path: in the sub-universe, the group appears as a
+  [door](/concepts/sub-universes#connections-across-universes), with its name and icon.
+- A connection to a group that is not shown (a group without nodes, or without a valid name) is
+  not drawn either; the group's own error is reported.
+
 ## Connecting to a sub-universe
 
 An end can be a node **inside** the universe of a node of this universe: write its path,
@@ -116,9 +171,13 @@ draws it on the end itself, with a door for the other end. See
 
 ## Rules
 
-- `from` and `to` must be ids of nodes of **the same universe** (for a path, its first id); an
-  unknown id is an error
-  (`Unknown node "api" (connections must reference nodes of the same universe)`).
+- `from` and `to` must be ids of nodes or groups of **the same universe** (for a path, its first
+  id must be a node); an unknown id is an error
+  (`Unknown node or group "api" (connections must reference nodes or groups of the same universe)`;
+  with `{ node }`: `Unknown node "api" …`, with `{ group }`: `Unknown group "api" …`).
+- An end names a node or a group, not both
+  (`An end names a node or a group, not both ("node" and "group" are set)`).
 - An end, path included, is at most 100 characters long.
-- Several connections may link the same two nodes; a connection may link a node to itself.
+- Several connections may link the same two nodes or groups; a connection may link a node to
+  itself (not a group).
 - Connections also order the nodes along the flow: see [Automatic layout](/concepts/layout).

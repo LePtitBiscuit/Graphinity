@@ -53,6 +53,15 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
   `ControlButton`) is a view-only toggle, remembered per universe for the session; the default
   is `background.grid`. `.vue-flow` and `.universe` use `overflow: clip`: they must never become
   scroll containers (focusing a control would shift the diagram).
+- **Connections to groups** (`fromGroup`/`toGroup`): their ends are Vue Flow group ids
+  (`groupFlowId`, `endOf` in `layout.ts`; `LaidOutEdge.from`/`to`). In ELK they attach to the
+  group node itself, without ports (ELK 0.12 fails on ports of nested groups in vertical flows),
+  so `reroute()` keeps ELK's routes only when they respect the configured sides of groups
+  (`keepsGroupSides`). In `route.ts` a group is a `frameBox()`: a `NodeBox` with `frame: true`
+  whose tile is the whole frame (`tileTop`, `tileHeight`), an end but never an obstacle nor a
+  label obstacle. `GroupNode.vue` has invisible handles (Vue Flow needs them to draw edges).
+  `context.ts` shows an ancestor's group as a door (`portal:<level>:group:<id>`, `Portal.group`);
+  `connectionsOf` lists a group end with `group: true`.
 - **Connection anchors**: a single connection on a side of a node attaches in the middle of the
   tile side; when a side carries several connections, each end gets its own ELK port, spread
   evenly along the tile (second ELK pass, `spreadPorts()`, `portPosition()`, `DEFAULT_SIDES` in

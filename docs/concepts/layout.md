@@ -119,6 +119,13 @@ another one.
 Groups are laid out together with their nodes, with room for their title. A group inside another
 group is laid out inside it. Connections cross group frames freely.
 
+A connection to a group ([Connecting groups](/config/connection#connecting-groups)) attaches to
+its frame: in the middle of a side, or spread along it when several connections share that side,
+on the side set in the configuration if any. It never runs through the inside of the frame, and
+the nodes inside the group do not get in its way. When a connection's `side` on a group cannot
+be reached by a simple route (the other end is right behind the group), it follows the layout
+engine's route, which may use another side.
+
 ## Nodes that open a universe
 
 They are drawn **doubled**: a copy of their tile behind it, shifted 6 px down and to the right,

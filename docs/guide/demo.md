@@ -53,19 +53,22 @@ kestrel/                        ← project directory (the root file's directory
   Slack). Its connections reach deep into the sub-universes by path
   (`platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`).
 - `edge/edge.yml` - DNS, CDN, WAF, API gateway and load balancers, in groups inside a
-  *Cloudflare* group.
+  *Cloudflare* group; a connection leaves the bottom of that group for Logpush
+  ([group → node](/config/connection#connecting-groups)).
 - `platform/platform.yml` - drawn top to bottom: the two regions and the shared services.
   `platform/clusters/eu-west.yml` nests groups on the maximum of 4 levels (cluster ›
   applications › commerce namespace › checkout node pool); `us-east.yml` is the standby copy.
 - `platform/services/checkout.yml` - one universe opened from both clusters. Its `db` node opens
-  `data/orders-db.yml`, the fifth level, stored in another folder. `catalog.yml` (its `images`
+  `data/orders-db.yml`, the fifth level, stored in another folder (its backups bootstrap the
+  *Replicas* group: node → group). `catalog.yml` (its `images`
   node, the image resizer, uses the [placement hint](/config/node#placement-hints) `place: last`) and
   `routing.yml` (drawn right to left) are the other services; `observability.yml` uses icons
   downloaded from the Iconify API (`mdi:…`).
 - `data/data.yml` - streaming, lakehouse and analytics; its `kafka` node opens `kafka.json`, a
   universe written in JSON. Its `notebooks` node uses the placement hint `after: dbt`.
 - `warehouses/warehouses.yml` - Lyon opens `lyon.yml` (drawn bottom to top over a floor plan,
-  `images/floor-plan.svg`, with frosted groups and `mdi:` icons for the warehouse floor),
+  `images/floor-plan.svg`, with frosted groups, a Wi-Fi connection between two groups and `mdi:`
+  icons for the warehouse floor),
   Rotterdam opens `rotterdam.yml`, Newark opens nothing yet.
 - `delivery/delivery.yml` - GitHub, CI, Argo CD and Terraform, with icons of the bundled
   collections (`devicon:`, `vscode-icons:`).

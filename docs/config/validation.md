@@ -28,6 +28,8 @@ over the diagram:
 | a node's `id` or `name` | the node, and its connections |
 | a connection (`from`, `to`, `color`, `style`, `arrow`) | the connection |
 | a connection's path into a sub-universe (`checkout/apii`, or that universe is broken) | the connection |
+| a connection to a group: unknown, itself, a node or group inside it, a path through it | the connection |
+| a connection to a group that is not shown (no nodes, no valid name) | the connection (the group's error is reported, not the connection) |
 | a connection's `label` | the label |
 | a connection end's `side` | nothing: the default side is used |
 | a group (`name` missing, no nodes) | the frame - its nodes are shown without it |
@@ -68,8 +70,10 @@ code `1`), and `build` writes nothing - an invalid configuration is never publis
 
 - Ids are valid; universe ids are unique in the project; node and group ids are unique in their
   universe.
-- Connections reference nodes of the same universe, or - with a path (`checkout/api`) - nodes of the
-  universes they open, up to 8 levels down.
+- Connections reference nodes or groups of the same universe, or - with a path (`checkout/api`) -
+  nodes of the universes they open, up to 8 levels down. A group end is not linked to itself nor
+  to a node or group inside it, and a path does not go through a group
+  ([Connecting groups](/config/connection#connecting-groups)).
 - `group` references a group declared in the universe; every group has at least one node,
   directly or in a group inside it; groups nest as a tree of at most 4 levels.
 - At most 4 tags per node, one per corner.

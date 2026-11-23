@@ -109,5 +109,7 @@ connections:
   (`Group "x" is nested too deep: a → b → c → d → x (max 4 levels)`).
 - A node whose `group` is not declared is an error:
   `Unknown group "x" (declare it in "groups")`.
+- A group can be an end of a connection (from a node, to a node, to another group): see
+  [Connecting groups](/config/connection#connecting-groups).
 - In the viewer, dragging a group moves its nodes and the groups inside it; a node, or a group,
   cannot be dragged out of its group.

@@ -103,7 +103,7 @@ describe('validateUniverse', () => {
         connections: [{ from: 'a', to: 'elsewhere' }, { from: 'a' }, 'x', { from: 'a', to: 'b', label: ['x'] }],
       }),
     ).toEqual([
-      ['connections.0.to', 'Unknown node "elsewhere" (connections must reference nodes of the same universe)'],
+      ['connections.0.to', 'Unknown node or group "elsewhere" (connections must reference nodes or groups of the same universe)'],
       ['connections.1.to', 'Missing required field "to"'],
       ['connections.2', 'A connection must be a mapping with "from" and "to"'],
       ['connections.3.label', '"label" must be a string, got a list'],
@@ -345,8 +345,8 @@ describe('validateUniverse - connections, sides, sizes, backgrounds and blur', (
     ])
     expect(issues.map((i) => [i.path.join('.'), i.message])).toEqual([
       ['connections.2.from.side', '"side" must be one of left, right, top, bottom, got "middle"'],
-      ['connections.3.from.edge', 'Unknown field "edge" (allowed: node, side)'],
-      ['connections.3.to.node', 'Missing required field "node"'],
+      ['connections.3.from.edge', 'Unknown field "edge" (allowed: node, group, side)'],
+      ['connections.3.to.node', 'Missing required field "node" (or "group")'],
       ['connections.4.from.node', 'Unknown node "nope" (connections must reference nodes of the same universe)'],
     ])
   })
@@ -432,7 +432,7 @@ describe('validateUniverse - connections, sides, sizes, backgrounds and blur', (
     ).toEqual([
       ['connections.0.to', 'Node "a" does not open a universe ("a/b")'],
       ['connections.1.to', 'Invalid node path "vps/bad id": "bad id" is not a node id (ids separated by "/", e.g. "vps/api")'],
-      ['connections.2.to', 'Unknown node "nope" (connections must reference nodes of the same universe)'],
+      ['connections.2.to', 'Unknown node or group "nope" (connections must reference nodes or groups of the same universe)'],
       ['connections.3.to', 'Node path "vps/x/x/x/x/x/x/x/x/y" is too deep (10 levels, max 8)'],
       ['connections.4.to', 'Invalid node path "vps/": "" is not a node id (ids separated by "/", e.g. "vps/api")'],
     ])
@@ -506,5 +506,100 @@ describe('validateUniverse - placement hints', () => {
       ['nodes.0.after', '"a" cannot be placed after "c": the connections lead from it to "c" (a → b → c)'],
     ])
     expect(nodes.map((n) => n?.after)).toEqual([undefined, undefined, undefined, 'b'])
+  })
+})
+
+describe('validateUniverse - connections to groups', () => {
+  const grouped = {
+    id: 'u',
+    name: 'U',
+    groups: [
+      { id: 'cloud', name: 'Cloud' },
+      { id: 'vpc', name: 'VPC', group: 'cloud' },
+      { id: 'onprem', name: 'On premises' },
+      { id: 'a', name: 'Same id as a node' },
+    ],
+    nodes: [
+      { id: 'a', name: 'A', icon: 'docker', group: 'onprem' },
+      { id: 'b', name: 'B', icon: 'redis', group: 'vpc' },
+      { id: 'c', name: 'C', icon: 'nginx', group: 'a' },
+      { id: 'd', name: 'D', icon: 'nginx' },
+    ],
+  }
+
+  it('reads a group id, { group }, and { group, side } as ends', () => {
+    expect(
+      edgesOf({
+        ...grouped,
+        connections: [
+          { from: 'd', to: 'cloud' },
+          { from: 'onprem', to: 'vpc' },
+          { from: { group: 'cloud', side: 'bottom' }, to: { node: 'a', side: 'top' } },
+          // A plain id names the node when a node has it; { group } names the group.
+          { from: 'a', to: 'd' },
+          { from: { group: 'a' }, to: 'd' },
+        ],
+      }),
+    ).toEqual([
+      { from: 'd', to: 'cloud', toGroup: true },
+      { from: 'onprem', to: 'vpc', fromGroup: true, toGroup: true },
+      { from: 'cloud', to: 'a', fromSide: 'bottom', toSide: 'top', fromGroup: true },
+      { from: 'a', to: 'd' },
+      { from: 'a', to: 'd', fromGroup: true },
+    ])
+    expect(issuesOf({ ...grouped, connections: [{ from: 'd', to: 'cloud' }] })).toEqual([])
+  })
+
+  it('reports invalid group ends and leaves the connection out', () => {
+    const data = {
+      ...grouped,
+      connections: [
+        { from: { group: 'nope' }, to: 'd' },
+        { from: { group: 'cloud', node: 'd' }, to: 'd' },
+        { from: 'cloud/b', to: 'd' },
+        { from: 'cloud', to: 'cloud' },
+        { from: 'cloud', to: 'b' },
+        { from: 'vpc', to: 'cloud' },
+        { from: 'onprem', to: 'a' },
+        { from: { node: 'onprem' }, to: 'd' },
+      ],
+    }
+    expect(edgesOf(data)).toEqual([])
+    expect(issuesOf(data)).toEqual([
+      ['connections.0.from.group', 'Unknown group "nope" (connections must reference groups of the same universe)'],
+      ['connections.1.from', 'An end names a node or a group, not both ("node" and "group" are set)'],
+      ['connections.2.from', 'Group "cloud" does not open a universe ("cloud/b")'],
+      ['connections.3', 'A group cannot be connected to itself ("cloud")'],
+      ['connections.4', 'Group "cloud" holds node "b": a connection cannot link a group to what is inside it'],
+      ['connections.5', 'Group "cloud" holds group "vpc": a connection cannot link a group to what is inside it'],
+      // `a` is the node here (in `onprem`).
+      ['connections.6', 'Group "onprem" holds node "a": a connection cannot link a group to what is inside it'],
+      ['connections.7.from.node', 'Unknown node "onprem" (connections must reference nodes of the same universe)'],
+    ])
+  })
+
+  it('leaves out, without more errors, a connection to a group that is not shown', () => {
+    const data = {
+      ...grouped,
+      groups: [...grouped.groups, { id: 'empty', name: 'Empty' }, { id: 'unnamed' }],
+      connections: [
+        { from: 'd', to: 'empty' },
+        { from: 'unnamed', to: 'd' },
+      ],
+    }
+    expect(edgesOf(data)).toEqual([])
+    expect(issuesOf(data)).toEqual([
+      ['groups.5.name', 'Missing required field "name"'],
+      ['groups.4', 'Group "empty" has no nodes'],
+    ])
+  })
+
+  it('does not check placement hints against connections to groups', () => {
+    const data = {
+      ...grouped,
+      nodes: [...grouped.nodes.slice(0, 3), { id: 'd', name: 'D', icon: 'nginx', after: 'b' }],
+      connections: [{ from: 'd', to: 'cloud' }],
+    }
+    expect(issuesOf(data)).toEqual([])
   })
 })

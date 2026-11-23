@@ -102,4 +102,20 @@ describe('toFlow', () => {
     expect(a!.position.x).toBeGreaterThan(0)
     expect(a!.position.x).toBeLessThan(group!.width as number)
   })
+
+  it('gives connections to groups the group as their source or target', async () => {
+    const flow = await flowOf({
+      id: 'u',
+      name: 'U',
+      direction: 'right',
+      source: 'u.yml',
+      groups: [{ id: 'g', name: 'G' }],
+      nodes: [node('a'), node('b', { group: 'g' })],
+      edges: [{ id: 'e0', from: 'a', to: 'g', toGroup: true }],
+    })
+    const group = flow.nodes.find((n) => n.id === 'group:g')!
+    const [edge] = flow.edges
+    expect(edge).toMatchObject({ source: 'a', target: 'group:g' })
+    expect(edge!.data!.targetOrigin).toEqual(group.position)
+  })
 })

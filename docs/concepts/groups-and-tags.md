@@ -39,7 +39,9 @@ connections:
   `group` property, up to 4 levels ([Groups inside groups](/config/group#groups-inside-groups)).
 - A group needs **at least one node** (an empty group is reported as an error - usually a typo
   in a node's `group`).
-- Connections go in and out of groups freely.
+- Connections go in and out of groups freely. A group can also be an **end** of a connection
+  itself - from a node, to a node or to another group: the arrow attaches to its frame
+  ([Connecting groups](/config/connection#connecting-groups)).
 - A group can have an `icon`, a `color`, a `border` style, a `background` (or none) and a
   `blur`: [Group reference](/config/group).
 - In the viewer, dragging a group moves its nodes (and the groups inside it) along; a node stays

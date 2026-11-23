@@ -68,3 +68,9 @@ connections:
   - from: primary
     to: backup
     label: WAL
+  # A connection to a group: new replicas start from the latest base backup.
+  - from: backup
+    to: replicas
+    label: bootstrap
+    style: dashed
+    color: gray

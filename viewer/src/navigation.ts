@@ -69,8 +69,10 @@ export function fromHash(architecture: Architecture, hash: string): NavigationPa
 export interface Connection {
   edgeId: string
   direction: 'in' | 'out'
-  /** The node at the other end. */
+  /** The node at the other end (for a group: its name and icon). */
   node: ArchitectureNode
+  /** The other end is a group of the universe (its frame), not a node. */
+  group?: true
   label?: string
   /** The other end is a node of another universe (a door): its universe and breadcrumb level. */
   external?: { universe: string; level: number }
@@ -78,30 +80,35 @@ export interface Connection {
 
 /**
  * Incoming and outgoing connections of a node within its universe, including those declared by
- * the ancestors (`context`): to other nodes of the universe or to doors.
+ * the ancestors (`context`): to other nodes or groups of the universe, or to doors.
  */
 export function connectionsOf(universe: Universe, nodeId: string, context?: UniverseContext): Connection[] {
   const byId = new Map(universe.nodes.map((node) => [node.id, node]))
+  const groups = new Map(universe.groups.map((group) => [group.id, group]))
   const doors = new Map((context?.portals ?? []).flatMap((p) => (p.node ? [[p.id, p] as const] : [])))
   const connections: Connection[] = []
   const edges: ArchitectureEdge[] = [
-    ...universe.edges.filter((edge) => !(edge.from === edge.to && (edge.fromPath || edge.toPath))),
+    // Not `vps → vps/api` (drawn inside the sub-universe only).
+    ...universe.edges.filter((edge) => !(edge.from === edge.to && !edge.fromGroup && !edge.toGroup && (edge.fromPath || edge.toPath))),
     ...(context?.edges ?? []),
   ]
   for (const edge of edges) {
-    for (const [direction, self, other] of [
-      ['out', edge.from, edge.to],
-      ['in', edge.to, edge.from],
+    for (const [direction, self, selfIsGroup, other, otherIsGroup] of [
+      ['out', edge.from, edge.fromGroup, edge.to, edge.toGroup],
+      ['in', edge.to, edge.toGroup, edge.from, edge.fromGroup],
     ] as const) {
-      const door = doors.get(other)
-      const node = byId.get(other) ?? door?.node
-      if (self !== nodeId || !node) continue
+      if (self !== nodeId || selfIsGroup) continue
+      const door = otherIsGroup ? undefined : doors.get(other)
+      const group = otherIsGroup ? groups.get(other) : undefined
+      const node = group ? { id: group.id, name: group.name, ...(group.icon && { icon: group.icon }) } : otherIsGroup ? undefined : (byId.get(other) ?? door?.node)
+      if (!node) continue
       // A self-loop is listed once.
-      if (direction === 'in' && edge.from === edge.to) continue
+      if (direction === 'in' && edge.from === edge.to && !edge.fromGroup && !edge.toGroup) continue
       connections.push({
         edgeId: edge.id,
         direction,
         node,
+        ...(group && { group: true as const }),
         ...(edge.label !== undefined && { label: edge.label }),
         ...(door && { external: { universe: door.universe.name, level: door.level } }),
       })

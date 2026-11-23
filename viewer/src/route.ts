@@ -7,12 +7,33 @@ import { TILE_LEFT, TILE_SIZE, TILE_TOP, type Point, type Rect } from './layout.
 
 const SIDES: Side[] = ['right', 'bottom', 'left', 'top']
 
-/** A node box, with the size of its tile (default: a `medium` node). */
+/**
+ * A node box, with the size of its tile (default: a `medium` node), or a group frame (`frame`):
+ * connections attach to the border of the tile, which is then the whole frame.
+ */
 export interface NodeBox extends Rect {
   tile?: number
   tileLeft?: number
+  /** From the top of the box to the tile (default `TILE_TOP`). */
+  tileTop?: number
+  /** Height of the tile when it is not square (default: `tile`). */
+  tileHeight?: number
   /** How far the tile behind a doubled node sticks out on the right (see `BEHIND_OFFSET`). */
   behind?: number
+  /** A group frame: an end of connections, never an obstacle (connections cross frames). */
+  frame?: boolean
+}
+
+/** The tile of a box (where connections attach), relative to the box. */
+function tileOf(box: NodeBox): { left: number; top: number; width: number; height: number } {
+  const width = box.tile ?? TILE_SIZE
+  return { left: box.tileLeft ?? TILE_LEFT, top: box.tileTop ?? TILE_TOP, width, height: box.tileHeight ?? width }
+}
+
+/** Length of the tile along a side: where the ends on that side are spread. */
+function span(box: NodeBox, side: Side): number {
+  const tile = tileOf(box)
+  return side === 'left' || side === 'right' ? tile.height : tile.width
 }
 
 /** Length of the straight part leaving and entering a node, beyond its box. */
@@ -69,18 +90,17 @@ export interface Route {
  * (connections never cross the name), the top end is the top of the tile.
  */
 function anchor(box: NodeBox, side: Side, shift = 0): { point: Point; exit: Point } {
-  const tile = box.tile ?? TILE_SIZE
-  const tileLeft = box.tileLeft ?? TILE_LEFT
+  const tile = tileOf(box)
   // `shift` moves the end along the side, from its middle (several connections on one side).
-  const middle = box.y + TILE_TOP + tile / 2 + (side === 'left' || side === 'right' ? shift : 0)
+  const middle = box.y + tile.top + tile.height / 2 + (side === 'left' || side === 'right' ? shift : 0)
   const center = box.x + box.width / 2 + (side === 'top' || side === 'bottom' ? shift : 0)
   switch (side) {
     case 'right':
-      return { point: { x: box.x + tileLeft + tile + (box.behind ?? 0), y: middle }, exit: { x: box.x + box.width + STUB, y: middle } }
+      return { point: { x: box.x + tile.left + tile.width + (box.behind ?? 0), y: middle }, exit: { x: box.x + box.width + STUB, y: middle } }
     case 'left':
-      return { point: { x: box.x + tileLeft, y: middle }, exit: { x: box.x - STUB, y: middle } }
+      return { point: { x: box.x + tile.left, y: middle }, exit: { x: box.x - STUB, y: middle } }
     case 'top':
-      return { point: { x: center, y: box.y + TILE_TOP }, exit: { x: center, y: box.y - STUB } }
+      return { point: { x: center, y: box.y + tile.top }, exit: { x: center, y: box.y - STUB } }
     case 'bottom':
       return { point: { x: center, y: box.y + box.height }, exit: { x: center, y: box.y + box.height + STUB } }
   }
@@ -214,7 +234,7 @@ function labelPoint(points: Point[]): Point {
 }
 
 /**
- * `source`, `target` and `obstacles` (the other nodes) are node boxes in flow coordinates.
+ * `source`, `target` (nodes or group frames) and `obstacles` (the other nodes) are boxes in flow coordinates.
  * `sides`: the sides set in the configuration, which are kept; the others are chosen.
  */
 /** Where an end of a connection is along a side of its node: the side, and the distance from its middle. */
@@ -225,13 +245,12 @@ export interface EndShift {
 
 /** The side and shift of `point`, an end of a connection on the tile of `box`. */
 export function shiftOf(point: Point, box: NodeBox): EndShift {
-  const tile = box.tile ?? TILE_SIZE
-  const tileLeft = box.tileLeft ?? TILE_LEFT
-  const middle = box.y + TILE_TOP + tile / 2
+  const tile = tileOf(box)
+  const middle = box.y + tile.top + tile.height / 2
   const center = box.x + box.width / 2
-  if (Math.abs(point.x - (box.x + tileLeft)) < 0.5) return { side: 'left', by: point.y - middle }
-  if (Math.abs(point.x - (box.x + tileLeft + tile + (box.behind ?? 0))) < 0.5) return { side: 'right', by: point.y - middle }
-  if (Math.abs(point.y - (box.y + TILE_TOP)) < 0.5) return { side: 'top', by: point.x - center }
+  if (Math.abs(point.x - (box.x + tile.left)) < 0.5) return { side: 'left', by: point.y - middle }
+  if (Math.abs(point.x - (box.x + tile.left + tile.width + (box.behind ?? 0))) < 0.5) return { side: 'right', by: point.y - middle }
+  if (Math.abs(point.y - (box.y + tile.top)) < 0.5) return { side: 'top', by: point.x - center }
   return { side: 'bottom', by: point.x - center }
 }
 
@@ -363,7 +382,7 @@ export function routeAll(
     const source = boxes.get(connection.from)
     const target = boxes.get(connection.to)
     if (!source || !target || connection.from === connection.to) return { connection, points: copy(connection.fallback), fixed: true, obstacles: [] }
-    const obstacles = entries.filter(([id]) => id !== connection.from && id !== connection.to).map(([, box]) => box)
+    const obstacles = entries.filter(([id, box]) => id !== connection.from && id !== connection.to && !box.frame).map(([, box]) => box)
     const route = routeAround(source, target, obstacles, configured(connection), [], {}, flow, keepClear)
     if (route.cost >= CROSSING_COST && (connection.fallback?.length ?? 0) >= 2) {
       const points = copy(connection.fallback)
@@ -409,7 +428,7 @@ export function routeAll(
   separate(plans)
 
   // 5. Labels.
-  const labels = placeLabels(plans, [...boxes.values()], keepClear)
+  const labels = placeLabels(plans, [...boxes.values()].filter((box) => !box.frame), keepClear)
 
   return new Map(plans.map((plan, index) => [plan.connection.id, { points: plan.points, ...(labels.has(index) && { label: labels.get(index)! }) }]))
 }
@@ -510,7 +529,7 @@ function spreadEnds(plans: readonly Plan[]): Map<string, number> {
       const node = end === 'from' ? plan.connection.from : plan.connection.to
       const key = `${node}\u0000${side}`
       const list = bySide.get(key) ?? []
-      list.push({ key: `${index}:${end}`, departure: departure(plan.points, side, end), index, tile: box.tile ?? TILE_SIZE })
+      list.push({ key: `${index}:${end}`, departure: departure(plan.points, side, end), index, tile: span(box, side) })
       bySide.set(key, list)
     }
   }
@@ -565,9 +584,9 @@ function straighten(plans: Plan[]): void {
       const side = moving === 'to' ? plan.to! : plan.from!
       const box = moving === 'to' ? plan.target! : plan.source!
       const target = moving === 'to' ? along(side, start) : along(side, end)
-      const tile = box.tile ?? TILE_SIZE
-      const tileStart = side === 'left' || side === 'right' ? box.y + TILE_TOP : box.x + (box.tileLeft ?? TILE_LEFT)
-      if (target < tileStart + 2 || target > tileStart + tile - 2) continue
+      const tile = tileOf(box)
+      const tileStart = side === 'left' || side === 'right' ? box.y + tile.top : box.x + tile.left
+      if (target < tileStart + 2 || target > tileStart + span(box, side) - 2) continue
       const list = ends.get(key(node, side)) ?? []
       if (list.some((other) => other.plan !== index && Math.abs(other.at - target) < END_GAP)) continue
       const line = moving === 'to' ? [start, horizontal ? { x: end.x, y: start.y } : { x: start.x, y: end.y }] : [horizontal ? { x: start.x, y: end.y } : { x: end.x, y: start.y }, end]

@@ -71,6 +71,24 @@ test('draws the configured styles: background, group name and blur, node sizes a
   expect(Math.abs(start.x - (server.x + server.width / 2))).toBeLessThan(2)
 })
 
+test('draws a connection to a group up to its frame', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${port}/`)
+  const frame = (await page.locator('.vue-flow__node[data-id="group:data"] .group').boundingBox())!
+  const edge = page.locator('.vue-flow__edge[data-id="e2"] path.vue-flow__edge-path')
+  await expect(page.locator('.vue-flow__edge-textwrapper, .vue-flow__edge-text').filter({ hasText: 'sync' }).first()).toBeVisible()
+  const end = await edge.evaluate((el) => {
+    const svg = el as unknown as { getTotalLength(): number; getPointAtLength(n: number): { x: number; y: number }; getScreenCTM(): { a: number; d: number; e: number; f: number } }
+    const p = svg.getPointAtLength(svg.getTotalLength())
+    const m = svg.getScreenCTM()
+    return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }
+  })
+  // On the border of the frame: on one of its sides, within its extent.
+  const near = (a: number, b: number) => Math.abs(a - b) < 2
+  const onVertical = (near(end.x, frame.x) || near(end.x, frame.x + frame.width)) && end.y > frame.y && end.y < frame.y + frame.height
+  const onHorizontal = (near(end.y, frame.y) || near(end.y, frame.y + frame.height)) && end.x > frame.x && end.x < frame.x + frame.width
+  expect(onVertical || onHorizontal, JSON.stringify({ end, frame })).toBe(true)
+})
+
 test('shows or hides the grid with the controls button', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${port}/`)
   const grid = page.locator('.vue-flow__background')

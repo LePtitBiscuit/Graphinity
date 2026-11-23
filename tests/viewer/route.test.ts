@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { NODE_WIDTH, TILE_LEFT, TILE_SIZE, TILE_TOP, type Point, type Rect } from '../../viewer/src/layout.ts'
+import { frameBox, NODE_WIDTH, TILE_LEFT, TILE_SIZE, TILE_TOP, type Point, type Rect } from '../../viewer/src/layout.ts'
 import { edgeCrossings, LANE_GAP, overlaps, routeAll, routeAround, shiftOf, type Connection, type NodeBox } from '../../viewer/src/route.ts'
 
 const box = (x: number, y: number, height = 104): Rect => ({ x, y, width: NODE_WIDTH, height })
@@ -235,5 +235,35 @@ describe('routeAll', () => {
     ]
     expect(routeAll(nodes, connections).get('loop')!.points).toEqual(loop)
     expect(routeAll(nodes, connections)).toEqual(routeAll(nodes, connections))
+  })
+
+  it('attaches connections to the frame of a group, which is no obstacle to the others', () => {
+    // A group frame holding `inner`, a node on its left, another one on its right.
+    const nodes = new Map<string, NodeBox>([
+      ['left', box(0, 100)],
+      ['inner', box(320, 100)],
+      ['right', box(700, 100)],
+      ['group:g', frameBox({ x: 300, y: 56, width: 184, height: 168 })],
+    ])
+    const routes = routeAll(nodes, [
+      { id: 'in', from: 'left', to: 'group:g' },
+      { id: 'out', from: 'group:g', to: 'right', fromSide: 'bottom' },
+      { id: 'through', from: 'left', to: 'inner' },
+    ])
+    const into = routes.get('in')!.points
+    check(into)
+    // On the left of the frame, straight from the node (its end lined up with the start).
+    expect(into.length).toBe(2)
+    expect(into.at(-1)!.x).toBe(300)
+    expect(into.at(-1)!.y).toBe(into[0]!.y)
+    const out = routes.get('out')!.points
+    check(out)
+    expect(out[0]!.y).toBe(56 + 168)
+    expect(out[0]!.x).toBeGreaterThan(300)
+    expect(out[0]!.x).toBeLessThan(484)
+    // Into a node of the group: across the frame, straight.
+    const through = routes.get('through')!.points
+    expect(through.length).toBe(2)
+    expect(through.at(-1)!.x).toBe(320 + TILE_LEFT)
   })
 })

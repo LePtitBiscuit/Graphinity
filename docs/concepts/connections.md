@@ -1,6 +1,8 @@
 # Connections
 
 A **connection** is an arrow from one node to another, listed in the `connections` of a universe.
+Its ends may also be [groups](/concepts/groups-and-tags#groups): see
+[Connecting groups](#connecting-groups).
 
 ```yaml [architecture.yml]
 id: app
@@ -33,6 +35,14 @@ connections:
   (`solid`, `dashed`, `dotted`) change how it looks.
 
 A connection may go from a node to itself, and several connections may link the same two nodes.
+
+## Connecting groups
+
+An end can be a group of the universe, by its id (when no node has that id) or as
+`{ group: <id> }`: the arrow then attaches to the frame of the group. A node can point to a group
+(`users → cloud`, "users reach the whole cloud"), a group to a node, and a group to another group
+(`office → datacenter`, a VPN between two sites). A group cannot be linked to itself nor to what
+is inside it. See [Connecting groups](/config/connection#connecting-groups).
 
 ## Connections into sub-universes
 

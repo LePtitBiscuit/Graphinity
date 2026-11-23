@@ -7,13 +7,18 @@ import type { Architecture, ArchitectureEdge, ArchitectureNode, Universe } from 
 import { linkingNode, universeAt, type NavigationPath } from './navigation.ts'
 
 export interface Portal {
-  /** Vue Flow / ELK id: `portal:<level>:<node id>`, or `portal:<level>` for the generic door. */
+  /**
+   * Vue Flow / ELK id: `portal:<level>:<node id>`, `portal:<level>:group:<group id>` for a group,
+   * or `portal:<level>` for the generic door.
+   */
   id: string
   /** Breadcrumb level of the universe it belongs to (where clicking it goes). */
   level: number
   universe: Universe
-  /** The node it stands for; absent for the generic door back to the parent. */
+  /** The node it stands for (for a group: its name and icon); absent for the generic door back to the parent. */
   node?: ArchitectureNode
+  /** The node stands for this group of that universe. */
+  group?: true
   /** `in`: connections come from it (start of the flow); `out`: they go to it (end of the flow). */
   role: 'in' | 'out'
 }
@@ -29,7 +34,7 @@ const EMPTY: UniverseContext = { portals: [], edges: [] }
 type End =
   | { kind: 'inside'; node: string; exact: boolean }
   | { kind: 'self' }
-  | { kind: 'external'; level: number; node: string }
+  | { kind: 'external'; level: number; node: string; group?: true }
   | { kind: 'ignored' }
 
 export function universeContext(architecture: Architecture, path: NavigationPath): UniverseContext {
@@ -57,23 +62,26 @@ export function universeContext(architecture: Architecture, path: NavigationPath
   const current = universes[depth]!
   const portals = new Map<string, Portal>()
   const edges: ArchitectureEdge[] = []
-  const portalFor = (end: { level: number; node: string }, role: Portal['role']): string | undefined => {
+  const portalFor = (end: { level: number; node: string; group?: true }, role: Portal['role']): string | undefined => {
     const universe = universes[end.level]!
-    const node = universe.nodes.find((n) => n.id === end.node)
+    const group = end.group ? universe.groups.find((g) => g.id === end.node) : undefined
+    // A group is shown as a door with its name and icon.
+    const node = end.group ? group && { id: group.id, name: group.name, ...(group.icon && { icon: group.icon }) } : universe.nodes.find((n) => n.id === end.node)
     if (!node) return undefined
-    const id = `portal:${end.level}:${node.id}`
+    const id = end.group ? `portal:${end.level}:group:${node.id}` : `portal:${end.level}:${node.id}`
     const known = portals.get(id)
     // A door that is a source of some connection stays at the start of the flow.
-    if (!known) portals.set(id, { id, level: end.level, universe, node, role })
+    if (!known) portals.set(id, { id, level: end.level, universe, node, role, ...(end.group && { group: true as const }) })
     else if (role === 'in') known.role = 'in'
     return id
   }
 
   for (let level = 0; level < depth; level++) {
     for (const edge of universes[level]!.edges) {
-      const from = classify([edge.from, ...(edge.fromPath ?? [])], level)
-      const to = classify([edge.to, ...(edge.toPath ?? [])], level)
-      const { id: _id, from: _f, to: _t, fromPath: _fp, toPath: _tp, fromSide, toSide, ...style } = edge
+      // A group is in the universe that declares it, never on the way down: always a door.
+      const from: End = edge.fromGroup ? { kind: 'external', level, node: edge.from, group: true } : classify([edge.from, ...(edge.fromPath ?? [])], level)
+      const to: End = edge.toGroup ? { kind: 'external', level, node: edge.to, group: true } : classify([edge.to, ...(edge.toPath ?? [])], level)
+      const { id: _id, from: _f, to: _t, fromPath: _fp, toPath: _tp, fromGroup: _fg, toGroup: _tg, fromSide, toSide, ...style } = edge
       const id = `ctx:${level}:${edge.id}`
       if (from.kind === 'inside' && to.kind === 'inside') {
         edges.push({
@@ -112,7 +120,12 @@ export function universeContext(architecture: Architecture, path: NavigationPath
  * sub-universe (`vps → vps/api`) is not drawn as a loop, only inside.
  */
 export function drawnEdges(universe: Universe): ArchitectureEdge[] {
-  return universe.edges.filter((edge) => !(edge.from === edge.to && (edge.fromPath || edge.toPath)))
+  return universe.edges.filter((edge) => !isInnerLoop(edge))
+}
+
+/** `vps → vps/api`: a node connected to the inside of its own sub-universe. */
+export function isInnerLoop(edge: ArchitectureEdge): boolean {
+  return edge.from === edge.to && !edge.fromGroup && !edge.toGroup && (edge.fromPath !== undefined || edge.toPath !== undefined)
 }
 
 /**

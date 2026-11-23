@@ -30,16 +30,25 @@ sub.yml:7:15 nodes[0].universe: Circular universe reference: architecture.yml â†
 A universe leads back to a universe that leads to it. Remove the `universe` field that closes
 the loop: to go back up, use the breadcrumb.
 
-## Connection to an unknown node
+## Connection to an unknown node or group
 
 ```
-architecture.yml:9:9 connections[0].to: Unknown node "api" (connections must reference nodes of the same universe)
+architecture.yml:9:9 connections[0].to: Unknown node or group "api" (connections must reference nodes or groups of the same universe)
 ```
 
-`from` and `to` take node **ids** of the same universe - or a
+`from` and `to` take node or group **ids** of the same universe - or a
 [path](/config/connection#connecting-to-a-sub-universe) into the sub-universe of one of them
 (`checkout/api`). A connection cannot reach a node of a parent or unrelated universe: add a node for
 the other side.
+
+## Connection to what a group holds
+
+```
+architecture.yml:21:5 connections[2]: Group "cloud" holds node "api": a connection cannot link a group to what is inside it
+```
+
+A connection to a [group](/config/connection#connecting-groups) attaches to its frame: its other
+end must be outside the group. Connect the node inside instead, or a group next to it.
 
 ## `edges` was renamed
 

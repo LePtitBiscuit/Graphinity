@@ -4,7 +4,7 @@
 import { useVueFlow, type XYPosition } from '@xyflow/vue'
 import { computed, inject, type ComputedRef, type InjectionKey } from 'vue'
 import type { FlowNode, RoutedFlowEdge } from './flow.ts'
-import { BEHIND_OFFSET, DEFAULT_SIDES, groupTitle, nodeGeometry, type Rect } from './layout.ts'
+import { BEHIND_OFFSET, DEFAULT_SIDES, frameBox, groupTitle, nodeGeometry, type Rect } from './layout.ts'
 import { routeAll, type NodeBox, type PlannedRoute } from './route.ts'
 
 /** Routes by connection id; undefined while no node has moved (the layout's routes are drawn). */
@@ -37,16 +37,25 @@ function routesOf(flow: ReturnType<typeof useVueFlow<FlowNode, RoutedFlowEdge>>)
     const boxes = new Map<string, NodeBox>()
     const moves = new Map<string, XYPosition>()
     let moved = false
+    const track = (id: string, x: number, y: number) => {
+      const origin = origins.get(id)
+      if (!origin) return
+      const move = { x: x - origin.x, y: y - origin.y }
+      moves.set(id, move)
+      if (move.x !== 0 || move.y !== 0) moved = true
+    }
     let direction: keyof typeof DEFAULT_SIDES | undefined
     /** Group titles, kept clear of labels. */
     const headers: Rect[] = []
     for (const node of flow.getNodes.value) {
-      // Groups are not obstacles: connections cross their frames.
+      // Groups are not obstacles (connections cross their frames), only ends of their own connections.
       if (node.type === 'cluster') {
         const internal = flow.getInternalNode(node.id)
         if (internal) {
           const box = { ...internal.internals.positionAbsolute, width: node.width ?? internal.measured.width ?? 0, height: node.height ?? 0 }
           headers.push(groupTitle(box, node.data.group.name))
+          boxes.set(node.id, frameBox(box))
+          track(node.id, box.x, box.y)
         }
         continue
       }
@@ -61,11 +70,7 @@ function routesOf(flow: ReturnType<typeof useVueFlow<FlowNode, RoutedFlowEdge>>)
       const width = node.width ?? internal.measured.width ?? 0
       const height = node.height ?? internal.measured.height ?? 0
       boxes.set(node.id, { x, y, width, height, tile, tileLeft, behind })
-      const origin = origins.get(node.id)
-      if (!origin) continue
-      const move = { x: x - origin.x, y: y - origin.y }
-      moves.set(node.id, move)
-      if (move.x !== 0 || move.y !== 0) moved = true
+      track(node.id, x, y)
     }
     if (!moved) return undefined
     return routeAll(

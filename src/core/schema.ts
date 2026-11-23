@@ -52,6 +52,9 @@ export interface RawEdge {
   arrow?: ArrowHeads
   fromSide?: Side
   toSide?: Side
+  /** `from` / `to` is a group of the universe, not a node. */
+  fromGroup?: true
+  toGroup?: true
   /** Node ids inside the sub-universe of `from` / `to` (`vps/api` → `["api"]`), resolved by the loader. */
   fromPath?: string[]
   toPath?: string[]
@@ -94,7 +97,7 @@ const BACKGROUND_FIELDS = ['image', 'color', 'blur', 'grid']
 const GROUP_FIELDS = ['id', 'name', 'icon', 'color', 'border', 'blur', 'group', 'background']
 const NODE_FIELDS = ['id', 'name', 'icon', 'description', 'universe', 'group', 'tags', 'color', 'border', 'background', 'size', 'place', 'after']
 const EDGE_FIELDS = ['from', 'to', 'label', 'color', 'style', 'arrow']
-const END_FIELDS = ['node', 'side']
+const END_FIELDS = ['node', 'group', 'side']
 export const SIDES: readonly Side[] = ['left', 'right', 'top', 'bottom']
 export const NODE_SIZES: readonly NodeSize[] = ['small', 'medium', 'large']
 export const NODE_PLACES: readonly NodePlace[] = ['first', 'last']
@@ -184,18 +187,6 @@ export function validateUniverse(data: unknown): ValidationResult {
     nodes.push(node)
   }
 
-  const shown = new Set(nodes.flatMap((node) => (node ? [node.id] : [])))
-  checkPlacement(nodes, shown, report)
-
-  const edges: RawEdge[] = []
-  const opening = new Set(nodes.flatMap((node) => (node?.universe !== undefined ? [node.id] : [])))
-  for (const [index, item] of readList(data, 'connections', false, report).entries()) {
-    const edge = readEdge(item, ['connections', index], { ids: nodeIds, opening }, report)
-    // A connection to a node that is not shown (already reported) is not shown either.
-    if (edge && shown.has(edge.from) && shown.has(edge.to)) edges.push(edge)
-  }
-  checkPlacementAgainstConnections(nodes, edges, report)
-
   // A group holding a used group is used too. A parent left out for an error still counts: its
   // own error is enough, without "has no nodes" on each group above it.
   const byId = new Map(groups.flatMap((group) => (group ? [[group.id, group] as const] : [])))
@@ -214,6 +205,22 @@ export function validateUniverse(data: unknown): ValidationResult {
       groups[index] = undefined
     }
   }
+
+  const shown = new Set(nodes.flatMap((node) => (node ? [node.id] : [])))
+  checkPlacement(nodes, shown, report)
+
+  const shownGroups = new Set(groups.flatMap((group) => (group ? [group.id] : [])))
+  const edges: RawEdge[] = []
+  const opening = new Set(nodes.flatMap((node) => (node?.universe !== undefined ? [node.id] : [])))
+  const known: KnownEnds = { ids: nodeIds, opening, groups: groupIds }
+  for (const [index, item] of readList(data, 'connections', false, report).entries()) {
+    const edge = readEdge(item, ['connections', index], known, report)
+    // A connection to a node or group that is not shown (already reported) is not shown either.
+    const visible = (id: string, group: boolean | undefined) => (group ? shownGroups.has(id) : shown.has(id))
+    if (!edge || !visible(edge.from, edge.fromGroup) || !visible(edge.to, edge.toGroup)) continue
+    if (checkGroupEnds(edge, nodes, groups, ['connections', index], report)) edges.push(edge)
+  }
+  checkPlacementAgainstConnections(nodes, edges, report)
 
   return {
     universe: {
@@ -264,7 +271,11 @@ function checkPlacement(nodes: (RawNode | undefined)[], shown: ReadonlySet<strin
  */
 function checkPlacementAgainstConnections(nodes: (RawNode | undefined)[], edges: readonly RawEdge[], report: Report): void {
   const next = new Map<string, string[]>()
-  for (const edge of edges) if (edge.from !== edge.to) next.set(edge.from, [...(next.get(edge.from) ?? []), edge.to])
+  for (const edge of edges) {
+    // Between nodes only: a group end does not order the nodes it holds.
+    if (edge.from === edge.to || edge.fromGroup || edge.toGroup) continue
+    next.set(edge.from, [...(next.get(edge.from) ?? []), edge.to])
+  }
   for (const [index, node] of nodes.entries()) {
     const target = node?.after
     if (!node || target === undefined) continue
@@ -285,6 +296,41 @@ function checkPlacementAgainstConnections(nodes: (RawNode | undefined)[], edges:
     report(['nodes', index, 'after'], `"${node.id}" cannot be placed after "${target}": the connections lead from it to "${target}" (${path.join(' → ')})`)
     delete node.after
   }
+}
+
+/**
+ * A group end cannot be linked to itself, nor to a node or group inside it (its frame holds the
+ * other end): reported, and the connection is left out. Returns whether the connection is kept.
+ */
+function checkGroupEnds(
+  edge: RawEdge,
+  nodes: readonly (RawNode | undefined)[],
+  groups: readonly (RawGroup | undefined)[],
+  path: FieldPath,
+  report: Report,
+): boolean {
+  if (!edge.fromGroup && !edge.toGroup) return true
+  const nodeGroup = new Map(nodes.flatMap((node) => (node?.group !== undefined ? [[node.id, node.group] as const] : [])))
+  const parent = new Map(groups.flatMap((group) => (group?.group !== undefined ? [[group.id, group.group] as const] : [])))
+  /** The groups holding an end, innermost first (the nesting is a tree of at most MAX_GROUP_DEPTH levels). */
+  const holders = (id: string, group: boolean | undefined): string[] => {
+    const chain: string[] = []
+    for (let at = group ? parent.get(id) : nodeGroup.get(id); at !== undefined && chain.length <= MAX_GROUP_DEPTH; at = parent.get(at)) chain.push(at)
+    return chain
+  }
+  if (edge.fromGroup && edge.toGroup && edge.from === edge.to) {
+    report(path, `A group cannot be connected to itself ("${edge.from}")`)
+    return false
+  }
+  for (const [group, other, otherIsGroup] of [
+    [edge.fromGroup && edge.from, edge.to, edge.toGroup],
+    [edge.toGroup && edge.to, edge.from, edge.fromGroup],
+  ] as const) {
+    if (!group || !holders(other, otherIsGroup).includes(group)) continue
+    report(path, `Group "${group}" holds ${otherIsGroup ? 'group' : 'node'} "${other}": a connection cannot link a group to what is inside it`)
+    return false
+  }
+  return true
 }
 
 function readGroup(item: unknown, path: FieldPath, report: Report): { id?: string; group?: RawGroup } {
@@ -590,16 +636,17 @@ function readNode(
   }
 }
 
-/** Ids of the universe's nodes, and of those that open a sub-universe. */
-interface KnownNodes {
+/** Ids of the universe's nodes, of those that open a sub-universe, and of its groups. */
+interface KnownEnds {
   ids: Set<string>
   opening: Set<string>
+  groups: Set<string>
 }
 
 function readEdge(
   item: unknown,
   path: FieldPath,
-  nodeIds: KnownNodes,
+  known: KnownEnds,
   report: Report,
 ): RawEdge | undefined {
   if (!isRecord(item)) {
@@ -607,8 +654,8 @@ function readEdge(
     return undefined
   }
   checkFields(item, EDGE_FIELDS, path, report)
-  const from = readEnd(item, 'from', path, nodeIds, report)
-  const to = readEnd(item, 'to', path, nodeIds, report)
+  const from = readEnd(item, 'from', path, known, report)
+  const to = readEnd(item, 'to', path, known, report)
   const label = readText(item, 'label', path, MAX_LABEL_LENGTH, false, report)
   const color = readColor(item, 'color', path, report)
   const style = readChoice(item, 'style', LINE_STYLES, path, report)
@@ -625,6 +672,8 @@ function readEdge(
     ...(arrow !== undefined && { arrow }),
     ...(from.side && { fromSide: from.side }),
     ...(to.side && { toSide: to.side }),
+    ...(from.group && { fromGroup: true as const }),
+    ...(to.group && { toGroup: true as const }),
     ...(from.path && { fromPath: from.path }),
     ...(to.path && { toPath: to.path }),
     index: Number(path[path.length - 1]),
@@ -634,14 +683,17 @@ function readEdge(
 /** A node path: `api`, or `vps/api` (the node `api` of the universe opened by `vps`), up to 8 levels. */
 const MAX_PATH_DEPTH = 8
 
-/** An end of a connection: a node id or path, or `{ node, side }`. */
+/**
+ * An end of a connection: a node id or path, or a group id (when no node has that id), or
+ * `{ node, side }` / `{ group, side }`.
+ */
 function readEnd(
   record: Record<string, unknown>,
   key: 'from' | 'to',
   path: FieldPath,
-  nodeIds: KnownNodes,
+  known: KnownEnds,
   report: Report,
-): { node: string; side?: Side; path?: string[] } | undefined {
+): { node: string; group?: true; side?: Side; path?: string[] } | undefined {
   const value = record[key]
   let node: string | undefined
   let side: Side | undefined
@@ -649,9 +701,27 @@ function readEnd(
   if (isRecord(value)) {
     const at = [...path, key]
     checkFields(value, END_FIELDS, at, report)
+    side = readChoice(value, 'side', SIDES, at, report) ?? undefined
+    const named = (field: string) => Object.hasOwn(value, field) && value[field] !== null && value[field] !== undefined
+    if (named('group')) {
+      if (named('node')) {
+        report(at, 'An end names a node or a group, not both ("node" and "group" are set)')
+        return undefined
+      }
+      const group = readText(value, 'group', at, MAX_ID_LENGTH, true, report)
+      if (group === undefined) return undefined
+      if (!known.groups.has(group)) {
+        report([...at, 'group'], `Unknown group "${group}" (connections must reference groups of the same universe)`)
+        return undefined
+      }
+      return { node: group, group: true, ...(side && { side }) }
+    }
+    if (!named('node')) {
+      report([...at, 'node'], 'Missing required field "node" (or "group")')
+      return undefined
+    }
     node = readText(value, 'node', at, MAX_ID_LENGTH, true, report)
     nodePath = [...at, 'node']
-    side = readChoice(value, 'side', SIDES, at, report) ?? undefined
   } else {
     node = readText(record, key, path, MAX_ID_LENGTH, true, report)
   }
@@ -669,11 +739,23 @@ function readEnd(
       return undefined
     }
   }
-  if (!nodeIds.ids.has(first)) {
-    report(nodePath, `Unknown node "${first}" (connections must reference nodes of the same universe)`)
+  const explicit = isRecord(value)
+  if (!known.ids.has(first)) {
+    // A plain id names a group when no node has it.
+    if (!explicit && known.groups.has(first)) {
+      if (inner.length === 0) return { node: first, group: true, ...(side && { side }) }
+      report(nodePath, `Group "${first}" does not open a universe ("${node}")`)
+      return undefined
+    }
+    report(
+      nodePath,
+      explicit
+        ? `Unknown node "${first}" (connections must reference nodes of the same universe)`
+        : `Unknown node or group "${first}" (connections must reference nodes or groups of the same universe)`,
+    )
     return undefined
   }
-  if (inner.length > 0 && !nodeIds.opening.has(first)) {
+  if (inner.length > 0 && !known.opening.has(first)) {
     report(nodePath, `Node "${first}" does not open a universe ("${node}")`)
     return undefined
   }
