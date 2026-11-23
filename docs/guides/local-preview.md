@@ -41,6 +41,7 @@ npx graphinity dev apps/architecture.yml --project .
 | Action | Effect |
 | ------ | ------ |
 | Click a node | Details: description, tags, group, connections, sub-universe, id, icon, source file. |
+| Search field (top right; `/` or `Ctrl K`) | Finds a node or a group of any universe by name; choosing one opens its universe, frames it and highlights it. |
 | Double-click a doubled node | Opens its universe. |
 | Breadcrumb, back button | Go back up. |
 | Drag a node or a group | Rearranges the view (not saved). |

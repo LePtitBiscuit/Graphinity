@@ -3,7 +3,7 @@
 // description. Sizes must match the geometry of layout.ts.
 import { Handle, Position, type NodeProps } from '@xyflow/vue'
 import { computed, inject } from 'vue'
-import { GESTURE, HANDLE_SIDES, SELECTED_NODE, type ServiceFlowNode } from '../flow.ts'
+import { GESTURE, HANDLE_SIDES, LOCATED, SELECTED_NODE, type ServiceFlowNode } from '../flow.ts'
 import { BEHIND_OFFSET, DESCRIPTION_LINE_HEIGHT, NAME_HEIGHT, nodeGeometry, TEXT_GAP, TILE_TOP } from '../layout.ts'
 import NodeIcon from './NodeIcon.vue'
 
@@ -12,6 +12,9 @@ const props = defineProps<NodeProps<ServiceFlowNode>>()
 const selectedId = inject(SELECTED_NODE, undefined)
 const selected = computed(() => selectedId?.value === props.id)
 const nested = computed(() => props.data.node.universe !== undefined)
+// Located by the search: a ring around the tile (replayed when found again).
+const located = inject(LOCATED, undefined)
+const locatedSeq = computed(() => (located?.value?.id === props.id ? located.value.seq : undefined))
 // Entering this node's universe with the scroll wheel: the bar under the tile.
 const gesture = inject(GESTURE, undefined)
 const entering = computed(() => {
@@ -76,6 +79,7 @@ const sizes = computed(() => {
       <Handle v-for="handle in handles.tile" :key="handle.type" :type="handle.type" :position="handle.position" :connectable="false" class="anchor" />
       <!-- This node opens a sub-universe (double-click): a copy of the tile behind it (CSS). -->
       <span v-if="nested" class="sr-only">Contains a sub-universe</span>
+      <span v-if="locatedSeq !== undefined" :key="locatedSeq" class="locator" aria-hidden="true" />
       <span v-if="entering !== undefined" class="entering" aria-hidden="true">
         <span class="fill" :style="{ transform: `scaleX(${entering})` }" />
       </span>
@@ -120,6 +124,31 @@ const sizes = computed(() => {
 }
 .selected {
   border-color: var(--na-accent);
+}
+/* Located by the search: a ring that pulses twice, then stays until something else is chosen. */
+.locator {
+  position: absolute;
+  inset: -7px;
+  border: 2px solid var(--na-accent);
+  border-radius: 17px;
+  pointer-events: none;
+  animation: locate 1.1s ease-out 2;
+}
+.nested > .locator {
+  inset: -7px calc(-7px - var(--behind)) calc(-7px - var(--behind)) -7px;
+}
+@keyframes locate {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--na-accent) 75%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 22px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .locator {
+    animation: none;
+  }
 }
 /* This node opens a universe: a copy of the tile behind it, shifted down and to the right, like a
    doubled node. Both are opaque (a fill color is laid over the card color) so that the one behind

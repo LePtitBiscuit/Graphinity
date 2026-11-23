@@ -19,12 +19,15 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
   the tile. A connection to a group attaches to the group's frame.
 - **Controls** at the bottom left: zoom in, zoom out, fit the universe to the screen, show or
   hide the grid.
+- **A search field** at the top right, to find a node or a group in any universe
+  (see [Search](#search)).
 
 ## Interactions
 
 | Action | Effect |
 | ------ | ------ |
-| Click a node | Opens the details panel (top right). |
+| Click a node | Opens the details panel (top right, below the search field). |
+| Type in the search field (`/` or `Ctrl K` / `⌘K` to reach it) | Lists the nodes and groups whose name matches; choosing one goes to it (see [Search](#search)). |
 | Double-click a doubled node | Opens its universe. |
 | *Open* in the details panel | Same as the double-click. |
 | Click a connection in the details | Selects the node at the other end, or, when that end is a node of a parent universe, goes back there. A group at the other end is listed as `Name (group)`, without a link. |
@@ -38,6 +41,31 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
 | Scroll on, zoomed out a little beyond the whole universe | A *Back to …* bar fills (about five notches) while the diagram moves away; then the parent comes back. |
 | Click a door (translucent node `↩ …`) | Goes back to the universe of that node. |
 | Grid button (bottom left) | Shows or hides the grid of the universe, for the session. Not saved: the default comes from [`background.grid`](/config/universe#background). |
+
+## Search
+
+The search field (top right) finds the **nodes and groups of every universe** by their name.
+Matching ignores case, accents and repeated spaces, and finds the text anywhere in the name; ids,
+descriptions, tags and connection labels are not searched. Doors are not listed: the node they
+stand for is, in its own universe.
+
+- **Results** are listed in two sections: *This universe* (the one shown) first, then *Other
+  universes*. In each, whole-name matches come first, then names that start with the text, then
+  words that start with it, then the rest; then universes closer to the root, then names in
+  alphabetical order. Each result says whether it is a node (a small tile with its icon) or a
+  group (a dashed frame), the group it is in, and, for other universes, the universe's name. Two
+  results with the same name in the same place also show their id. A universe opened by several
+  nodes is listed once.
+- **Choosing a result** (click, or `Enter`) goes to it: the view moves to the node or group and
+  frames it, and a ring pulses around it, then stays until you choose something else or click the
+  canvas. A node is also selected: its details panel opens. A result of another universe opens
+  that universe first: through the path shown when the universe is on it or below it (the
+  breadcrumb is kept), otherwise from the root, by the fewest levels.
+- **Keyboard**: `/` or `Ctrl K` (`⌘K`) puts the cursor in the field; `↓` and `↑` move through the
+  results, `Enter` goes to the highlighted one (the first by default); `Esc` clears the field, and
+  in an empty field gives the keyboard back to the diagram. The `×` button clears the field too.
+- **Many results**: the first 50 are shown, with how many there are in all; type more to narrow
+  them. Nothing found: *No node or group matches "…"*.
 
 The **details panel** lists the description, tags, sub-universe (with its number of nodes),
 incoming and outgoing connections, and the node's id, group, icon and source file.

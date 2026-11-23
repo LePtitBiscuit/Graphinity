@@ -1,12 +1,16 @@
 <script setup lang="ts">
 // A group: a labelled frame drawn behind its nodes. Dragging it moves them along.
 import { Handle, Position, type NodeProps } from '@xyflow/vue'
-import { computed } from 'vue'
-import type { GroupFlowNode } from '../flow.ts'
+import { computed, inject } from 'vue'
+import { LOCATED, type GroupFlowNode } from '../flow.ts'
 import { GROUP_HEADER } from '../layout.ts'
 import NodeIcon from './NodeIcon.vue'
 
 const props = defineProps<NodeProps<GroupFlowNode>>()
+
+// Located by the search: a ring around the frame (replayed when found again).
+const located = inject(LOCATED, undefined)
+const locatedSeq = computed(() => (located?.value?.id === props.id ? located.value.seq : undefined))
 
 // Frame color (border, name and a light tint of the background), border style, fill (`none`:
 // transparent), and blur of what is behind the frame (the universe background). A group inside
@@ -29,6 +33,7 @@ const frame = computed(() => {
       <NodeIcon v-if="data.group.icon" :icon="data.group.icon" :logo="data.logo" />
       <span class="name" :title="data.group.name">{{ data.group.name }}</span>
     </header>
+    <span v-if="locatedSeq !== undefined" :key="locatedSeq" class="locator" aria-hidden="true" />
     <!-- Invisible anchors for the connections to the group (they draw their own route); not connectable. -->
     <Handle type="target" :position="Position.Left" :connectable="false" class="anchor" />
     <Handle type="source" :position="Position.Right" :connectable="false" class="anchor" />
@@ -37,6 +42,7 @@ const frame = computed(() => {
 
 <style scoped>
 .group {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -68,6 +74,28 @@ header {
 header :deep(.icon) {
   width: 16px;
   height: 16px;
+}
+/* Located by the search: a ring that pulses twice, then stays until something else is chosen. */
+.locator {
+  position: absolute;
+  inset: -6px;
+  border: 2px solid var(--na-accent);
+  border-radius: 19px;
+  pointer-events: none;
+  animation: locate 1.1s ease-out 2;
+}
+@keyframes locate {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--na-accent) 75%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 26px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .locator {
+    animation: none;
+  }
 }
 .anchor {
   opacity: 0;

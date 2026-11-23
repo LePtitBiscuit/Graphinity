@@ -5,7 +5,7 @@
 import type { Viewport } from '@xyflow/vue'
 import { computed, onBeforeUnmount, onMounted, provide, shallowRef, watch } from 'vue'
 import type { ViewerData } from '../../../src/core/types.ts'
-import { SELECTED_NODE } from '../flow.ts'
+import { groupFlowId, LOCATED, SELECTED_NODE, type Located } from '../flow.ts'
 import {
   currentId,
   fromHash,
@@ -17,7 +17,9 @@ import {
   up,
   type NavigationPath,
 } from '../navigation.ts'
+import { pathTo, type SearchEntry } from '../search.ts'
 import NodeDetails from './NodeDetails.vue'
+import SearchBox from './SearchBox.vue'
 import UniverseView from './UniverseView.vue'
 import { universeContext } from '../context.ts'
 
@@ -27,6 +29,10 @@ const architecture = computed(() => props.data.architecture)
 const path = shallowRef<NavigationPath>(fromHash(architecture.value, location.hash))
 const selectedId = shallowRef<string>()
 provide(SELECTED_NODE, selectedId)
+/** Node or group found by the search (highlighted until something else is chosen). */
+const located = shallowRef<Located>()
+provide(LOCATED, located)
+let locatedCount = 0
 
 /** Last viewport of each visited path (restored when coming back), by `pathKey`. */
 const viewports = new Map<string, Viewport>()
@@ -56,7 +62,24 @@ function navigate(next: NavigationPath) {
   arrival.value = next.length > path.value.length ? 'in' : next.length < path.value.length ? 'out' : undefined
   path.value = next
   selectedId.value = undefined
+  located.value = undefined
   history.pushState(null, '', urlFor(next))
+}
+
+/** Selects a node (or nothing); the search highlight goes, unless it is on that node. */
+function select(id: string | undefined) {
+  selectedId.value = id
+  if (located.value?.id !== id) located.value = undefined
+}
+
+/** A search result: opens its universe if needed, goes to it and highlights it; a node is also
+ * selected (its details are shown). */
+function locate(entry: SearchEntry) {
+  const next = pathTo(architecture.value, path.value, entry.universe)
+  if (!next) return
+  navigate(next)
+  selectedId.value = entry.kind === 'node' ? entry.id : undefined
+  located.value = { id: entry.kind === 'node' ? entry.id : groupFlowId(entry.id), key: pathKey(next), seq: ++locatedCount }
 }
 
 function urlFor(next: NavigationPath): string {
@@ -82,11 +105,11 @@ function onPopState() {
   const next = fromHash(architecture.value, location.hash)
   arrival.value = next.length > path.value.length ? 'in' : next.length < path.value.length ? 'out' : undefined
   path.value = next
-  selectedId.value = undefined
+  select(undefined)
 }
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') selectedId.value = undefined
+  if (event.key === 'Escape') select(undefined)
 }
 
 onMounted(() => {
@@ -131,6 +154,8 @@ onBeforeUnmount(() => {
       </ol>
     </nav>
 
+    <SearchBox class="search" :architecture="architecture" :icons="data.icons" :current="currentId(path)" @pick="locate" />
+
     <!-- Keyed by path (a universe opened by another node has other doors): each visit gets a fresh
          canvas; its viewport is restored from memory. -->
     <UniverseView
@@ -142,7 +167,7 @@ onBeforeUnmount(() => {
       :context="context"
       :parent-name="parentName"
       :arrival="arrival"
-      @select="(id) => (selectedId = id)"
+      @select="select"
       @open="open"
       @exit-to="(level) => navigate(goToLevel(path, level))"
       @leave="leave"
@@ -158,8 +183,8 @@ onBeforeUnmount(() => {
       :icons="data.icons"
       :context="context"
       @open="open(selectedNode.id)"
-      @close="selectedId = undefined"
-      @select="(id) => (selectedId = id)"
+      @close="select(undefined)"
+      @select="select"
       @exit-to="(level) => navigate(goToLevel(path, level))"
     />
   </div>
@@ -185,6 +210,13 @@ button {
   font: inherit;
   color: inherit;
   cursor: pointer;
+}
+.search {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 20;
+  max-width: calc(100% - 24px);
 }
 .back {
   display: grid;

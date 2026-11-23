@@ -10,10 +10,10 @@ import {
   type Viewport,
   type VueFlowInstance,
 } from '@xyflow/vue'
-import { computed, markRaw, onBeforeUnmount, provide, ref, shallowRef, watch } from 'vue'
+import { computed, inject, markRaw, onBeforeUnmount, provide, ref, shallowRef, watch } from 'vue'
 import type { Universe, ViewerIcon } from '../../../src/core/types.ts'
 import { drawnEdges, portalNode, type UniverseContext } from '../context.ts'
-import { GESTURE, toFlow, type FlowNode, type RoutedFlowEdge } from '../flow.ts'
+import { GESTURE, LOCATED, toFlow, type FlowNode, type RoutedFlowEdge } from '../flow.ts'
 import { boundsOf, createScrollGesture, easeOut, enterTarget, EXIT_ZOOM, fitZoom, SCROLL_IDLE, wheelDistance, type Bounds, type Hold } from '../gestures.ts'
 import { layoutUniverse, type MeasureText, type UniverseLayout } from '../layout.ts'
 import { SHARED_ROUTES, type Routes } from '../routing.ts'
@@ -284,6 +284,45 @@ function onWheel(event: WheelEvent) {
 }
 
 onBeforeUnmount(() => clearTimeout(clearTimer))
+
+// Search (Explorer.vue): the view goes to the node or group found, and frames it. Found in
+// another universe, this one has just been opened for it: it starts there instead of being fitted
+// to the screen, without moving; found here, the view moves to it.
+const locatedRef = inject(LOCATED, undefined)
+/** Located in this canvas (another one may still be shown while the next one opens). */
+const located = computed(() => (locatedRef?.value?.key === (props.context?.key ?? props.universe.id) ? locatedRef.value : undefined))
+const fitOnOpen = !props.initialViewport && !located.value
+let pending = located.value !== undefined
+const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)')
+
+function goToLocated(animate: boolean) {
+  const target = located.value
+  const node = target && instance?.getInternalNode(target.id)
+  if (!node || node.type === 'portal') return
+  const group = node.type === 'cluster'
+  // A node is shown a little larger than at the fit zoom, a group whole.
+  void instance!.fitView({
+    nodes: [{ id: target.id }],
+    padding: group ? 0.15 : 0.6,
+    minZoom: MIN_ZOOM,
+    maxZoom: group ? 1 : 1.25,
+    duration: animate && !reducedMotion.matches ? 450 : 0,
+  })
+}
+
+function onInit(flowInstance: VueFlowInstance) {
+  instance = flowInstance
+  // Vue Flow runs the fit once the nodes are measured.
+  if (pending) goToLocated(false)
+  pending = false
+}
+
+watch(
+  located,
+  (target) => {
+    if (target && instance) goToLocated(true)
+  },
+)
 </script>
 
 <script lang="ts">
@@ -320,7 +359,7 @@ function gridChoice(id: string, fallback: boolean): boolean {
       :node-types="nodeTypes"
       :edge-types="edgeTypes"
       force-color-mode="dark"
-      :fit-view="!initialViewport"
+      :fit-view="fitOnOpen"
       :fit-view-options="fitViewOptions"
       :default-viewport="initialViewport"
       :min-zoom="MIN_ZOOM"
@@ -338,7 +377,7 @@ function gridChoice(id: string, fallback: boolean): boolean {
       @node-double-click="onDoubleClick"
       @pane-click="emit('select', undefined)"
       @viewport-change-end="(viewport) => emit('viewport', props.context?.key ?? universe.id, viewport)"
-      @init="(flow) => (instance = flow)"
+      @init="onInit"
     >
       <Background v-if="showGrid" variant="lines" :gap="24" :line-width="1" :color="gridColor" />
       <Controls :show-interactive="false" :fit-view-options="fitViewOptions">

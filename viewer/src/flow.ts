@@ -31,6 +31,16 @@ export const GESTURE: InjectionKey<Readonly<Ref<Hold | undefined>>> = Symbol('ge
 /** Id of the node whose details are shown (selection is ours, not Vue Flow's). */
 export const SELECTED_NODE: InjectionKey<Readonly<Ref<string | undefined>>> = Symbol('selected-node')
 
+/** Node or group located by the search (Vue Flow id): the view goes to it and it is highlighted;
+ * a new `seq` replays the highlight (the same element found again). */
+export interface Located {
+  id: string
+  /** The path it was found in (`pathKey`): only the canvas of that path goes to it. */
+  key: string
+  seq: number
+}
+export const LOCATED: InjectionKey<Readonly<Ref<Located | undefined>>> = Symbol('located')
+
 /** Arrowhead; without a color it follows the theme (`--xy-edge-stroke`). */
 const arrow = (color: string | undefined) => ({ type: MarkerType.ArrowClosed, width: 16, height: 16, ...(color && { color }) })
 

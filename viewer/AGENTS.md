@@ -15,7 +15,9 @@ package. Read the [root guide](../AGENTS.md) first.
 | `components/GroupNode.vue` | A group frame with its icon and name, its fill (`--group-fill`: a color, or transparent for `none`). |
 | `components/RoutedEdge.vue` | A connection: the route computed by the layout, or, once a node or group has been dragged, its route from `routing.ts`. |
 | `components/NodeIcon.vue` | Simple Icons logo (path data), icon of another collection or local image (`<img>` of a site file), or generic icon. |
-| `components/NodeDetails.vue` | Details panel of the selected node. |
+| `components/NodeDetails.vue` | Details panel of the selected node (below the search field). |
+| `components/SearchBox.vue` | Search field (top right): an ARIA combobox (the focus stays in the field, `aria-activedescendant`), results of the universe shown first, `/` and Ctrl/⌘+K focus it, `Esc` clears it. Emits the chosen `SearchEntry`; `Explorer.vue` opens its universe (`pathTo`), selects a node and sets `LOCATED` (flow.ts): `UniverseView.vue` frames it (`fitView` on that node, without the initial fit when the universe was opened for it), `ServiceNode.vue`/`GroupNode.vue` draw the `.locator` ring (keyed by `seq`, so finding it again replays the pulse). |
+| `search.ts` | Search: `searchIndex` (every node and group of the reachable universes, once per universe, with `fold`ed names), `search` (case, accents and spaces ignored; ranking; `SEARCH_LIMIT`), `pathTo` (the path that shows a universe, keeping the current one when it can). Pure, unit-tested. |
 | `components/ConfigErrors.vue` | Button listing the configuration errors when the dev server shows a partial diagram (`ViewerData.errors`). |
 | `context.ts` | What the ancestors say about the current universe (depends on the navigation path): doors (`Portal`) and connections declared higher up (`fromPath`/`toPath`). Pure, unit-tested. |
 | `gestures.ts` | Scroll navigation: the gesture filled by the amount scrolled (`SCROLL_AMOUNT`, cancelled after `SCROLL_IDLE`), `wheelDistance`, `enterTarget` (only node with a universe, or the one under or closest to the mouse cursor), `EXIT_ZOOM` (share of the fit zoom where leaving starts), `easeOut`, `fitZoom`. Pure, unit-tested. |
@@ -95,6 +97,6 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
 
 ## Tests
 
-`tests/viewer/` (layout, flow, route, navigation, colors) run in Node; `e2e/navigation.spec.ts` drives the
-built viewer through the CLI dev server in Chrome. When the drawing or an interaction changes,
+`tests/viewer/` (layout, flow, route, navigation, search, colors) run in Node; `e2e/navigation.spec.ts`
+and `e2e/search.spec.ts` drive the built viewer through the CLI dev server in Chrome. When the drawing or an interaction changes,
 update both and `docs/concepts/layout.md` / `docs/reference/viewer.md`.

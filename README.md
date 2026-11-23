@@ -26,6 +26,7 @@ builds it into a static site.
 
 - **Files are the only source of truth**: no editor, no database, no coordinates to maintain.
 - **Recursive universes**: double-click a node to open the universe inside it, at any depth.
+- **Search** the nodes and groups of every universe by name, and jump straight to them.
 - **Automatic layout** (ELK), with orthogonal connections, labels, groups and tags.
 - **Icons**: bundled logos, any [Iconify](https://icon-sets.iconify.design) icon, Dashboard
   Icons or your own images, embedded in the site (it works offline).

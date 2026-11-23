@@ -96,13 +96,14 @@ const iconText = computed(() => {
 <style scoped>
 .details {
   position: absolute;
-  top: 12px;
+  /* Below the search field (Explorer.vue). */
+  top: 52px;
   right: 12px;
   z-index: 10;
   box-sizing: border-box;
   width: 300px;
   max-width: calc(100% - 24px);
-  max-height: calc(100% - 24px);
+  max-height: calc(100% - 64px);
   overflow-y: auto;
   padding: 14px 16px;
   background: var(--na-card);
