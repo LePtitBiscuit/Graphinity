@@ -2,7 +2,7 @@
 // that reach into it (`ci → vps/api`), and the nodes of the parent connected to the node that
 // opens it. Nodes of other universes are shown as "doors" (portals): clicking one goes back to
 // its universe. Pure functions, unit-tested; depends on the path actually taken (a universe may
-// be reached through different parents).
+// be reached through different parents, or through several nodes of one parent).
 import type { Architecture, ArchitectureEdge, ArchitectureNode, Universe } from '../../src/core/types.ts'
 import { linkingNode, universeAt, type NavigationPath } from './navigation.ts'
 
@@ -40,11 +40,13 @@ type End =
 export function universeContext(architecture: Architecture, path: NavigationPath): UniverseContext {
   const depth = path.length - 1
   if (depth < 1) return EMPTY
-  const universes = path.map((id) => universeAt(architecture, id))
+  const universes = path.map((step) => universeAt(architecture, step.universe))
   if (universes.some((u) => !u)) return EMPTY
+  /** The node that opened each level: the one recorded in the path. */
   const chain: string[] = []
   for (let level = 0; level < depth; level++) {
-    const node = linkingNode(universes[level], path[level + 1]!)
+    const step = path[level + 1]!
+    const node = linkingNode(universes[level], step.universe, step.node)
     if (!node) return EMPTY
     chain.push(node.id)
   }

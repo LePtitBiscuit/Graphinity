@@ -43,7 +43,8 @@ const emit = defineEmits<{
   exitTo: [level: number]
   /** Back to the parent with the scroll wheel. */
   leave: []
-  viewport: [universeId: string, viewport: Viewport]
+  /** The viewport settled; `key`: the path taken (`context.key`), or the universe id without context. */
+  viewport: [key: string, viewport: Viewport]
 }>()
 
 const nodeTypes = { service: markRaw(ServiceNode), cluster: markRaw(GroupNode), portal: markRaw(PortalNode) } as NodeTypesObject<FlowNode>
@@ -336,7 +337,7 @@ function gridChoice(id: string, fallback: boolean): boolean {
       @node-click="onClick"
       @node-double-click="onDoubleClick"
       @pane-click="emit('select', undefined)"
-      @viewport-change-end="(viewport) => emit('viewport', universe.id, viewport)"
+      @viewport-change-end="(viewport) => emit('viewport', props.context?.key ?? universe.id, viewport)"
       @init="(flow) => (instance = flow)"
     >
       <Background v-if="showGrid" variant="lines" :gap="24" :line-width="1" :color="gridColor" />

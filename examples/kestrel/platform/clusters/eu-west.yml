@@ -68,6 +68,14 @@ nodes:
     description: Receives Stripe events and hands them to checkout.
     group: checkout-pool
     size: small
+  - id: checkout-canary
+    name: Checkout canary
+    icon: typescript
+    description: The next release of checkout, on a slice of the traffic. Same service, same file.
+    universe: ../services/checkout.yml # shared with the node checkout: one file, two entry points
+    group: checkout-pool
+    border: dashed
+    tags: [{ text: 1 pod, corner: bottom-left }]
   - id: routing
     name: Routing
     icon: python
@@ -99,6 +107,10 @@ connections:
   - from: ingress
     to: checkout
     label: /checkout
+  - from: ingress
+    to: checkout-canary/api
+    label: 5% canary
+    style: dashed
   - from: { node: storefront, side: bottom }
     to: { node: catalog, side: top }
     label: gRPC

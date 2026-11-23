@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Architecture, ArchitectureEdge, ArchitectureNode, Universe } from '../../src/core/types.ts'
 import { drawnEdges, portalNode, universeContext } from '../../viewer/src/context.ts'
-import { connectionsOf } from '../../viewer/src/navigation.ts'
+import { connectionsOf, fromHash, openNode, rootPath, type NavigationPath } from '../../viewer/src/navigation.ts'
 
 const node = (id: string, universe?: string): ArchitectureNode => ({ id, name: id.toUpperCase(), icon: { type: 'name', name: 'x' }, ...(universe && { universe }) })
 const universe = (id: string, nodes: ArchitectureNode[], edges: Omit<ArchitectureEdge, 'id'>[] = []): Universe => ({
@@ -13,6 +13,9 @@ const universe = (id: string, nodes: ArchitectureNode[], edges: Omit<Architectur
   nodes,
   edges: edges.map((edge, index) => ({ id: `e${index}`, ...edge })),
 })
+
+/** A path through these universes, each opened by the first node that opens it. */
+const at = (...ids: string[]): NavigationPath => ids.map((universe) => ({ universe }))
 
 /** root → org (node `org`) → vps (node `vps`). */
 function architecture(rootEdges: Omit<ArchitectureEdge, 'id'>[], orgEdges: Omit<ArchitectureEdge, 'id'>[] = []): Architecture {
@@ -28,13 +31,13 @@ function architecture(rootEdges: Omit<ArchitectureEdge, 'id'>[], orgEdges: Omit<
 
 describe('universeContext', () => {
   it('has nothing at the root', () => {
-    expect(universeContext(architecture([]), ['root'])).toEqual({ portals: [], edges: [] })
+    expect(universeContext(architecture([]), at('root'))).toEqual({ portals: [], edges: [] })
   })
 
   it('shows the parent nodes connected to the universe node as doors, without edges', () => {
     const { portals, edges } = universeContext(
       architecture([], [{ from: 'ci', to: 'vps', label: 'deploy' }, { from: 'vps', to: 'backups' }]),
-      ['root', 'org', 'vps'],
+      at('root', 'org', 'vps'),
     )
     expect(portals.map((p) => [p.id, p.role, p.level, p.node?.id])).toEqual([
       ['portal:1:ci', 'in', 1, 'ci'],
@@ -52,7 +55,7 @@ describe('universeContext', () => {
         { from: 'vps', fromPath: ['api'], to: 'vps', toPath: ['db'], style: 'dashed' },
       ],
     )
-    const { portals, edges } = universeContext(arch, ['root', 'org', 'vps'])
+    const { portals, edges } = universeContext(arch, at('root', 'org', 'vps'))
     expect(portals.map((p) => [p.id, p.role])).toEqual([
       ['portal:0:github', 'in'],
       ['portal:1:ci', 'in'],
@@ -65,7 +68,7 @@ describe('universeContext', () => {
       { id: 'ctx:1:e2', from: 'api', to: 'db', style: 'dashed' },
     ])
     // In the middle universe, the same connections end on the node that contains them.
-    const middle = universeContext(arch, ['root', 'org'])
+    const middle = universeContext(arch, at('root', 'org'))
     expect(middle.portals.map((p) => p.id)).toEqual(['portal:0:github'])
     expect(middle.edges).toEqual([{ id: 'ctx:0:e0', from: 'portal:0:github', to: 'vps', label: 'webhook', color: '#4f8cff' }])
   })
@@ -77,19 +80,19 @@ describe('universeContext', () => {
         { from: 'ci', to: 'vps', toPath: ['api'] },
         { from: 'ci', to: 'vps', toPath: ['db'] },
       ]),
-      ['root', 'org', 'vps'],
+      at('root', 'org', 'vps'),
     )
     expect(portals.map((p) => [p.id, p.role])).toEqual([['portal:1:ci', 'in']])
   })
 
   it('ignores connections of distant ancestors to the universe node, and those to a container', () => {
     // github → org is about org, which contains vps: nothing in vps.
-    const { portals } = universeContext(architecture([{ from: 'github', to: 'org' }]), ['root', 'org', 'vps'])
+    const { portals } = universeContext(architecture([{ from: 'github', to: 'org' }]), at('root', 'org', 'vps'))
     expect(portals.map((p) => [p.id, p.node])).toEqual([['portal:1', undefined]])
   })
 
   it('adds a door back to the parent when no node is connected', () => {
-    const [door] = universeContext(architecture([]), ['root', 'org']).portals
+    const [door] = universeContext(architecture([]), at('root', 'org')).portals
     expect(door).toMatchObject({ id: 'portal:0', level: 0, role: 'in', universe: { id: 'root' } })
     expect(portalNode(door!)).toEqual({ id: 'portal:0', name: 'ROOT', description: '↩ ROOT', size: 'large' })
   })
@@ -99,8 +102,35 @@ describe('universeContext', () => {
     // vps also opened from the root directly: the org's connection does not apply there.
     arch.universes['root']!.nodes.push(node('direct', 'vps'))
     arch.universes['root']!.edges.push({ id: 'e9', from: 'mail', to: 'direct', toPath: ['db'] })
-    expect(universeContext(arch, ['root', 'org', 'vps']).edges.map((e) => e.from)).toEqual(['portal:1:ci'])
-    expect(universeContext(arch, ['root', 'vps']).edges).toEqual([{ id: 'ctx:0:e9', from: 'portal:0:mail', to: 'db' }])
+    expect(universeContext(arch, at('root', 'org', 'vps')).edges.map((e) => e.from)).toEqual(['portal:1:ci'])
+    expect(universeContext(arch, at('root', 'vps')).edges).toEqual([{ id: 'ctx:0:e9', from: 'portal:0:mail', to: 'db' }])
+  })
+
+  it('follows the node actually used when several nodes of the parent open the universe', () => {
+    // `vps` and `spare` both open vps; each has its own connections in org.
+    const arch = architecture([], [
+      { from: 'ci', to: 'vps', toPath: ['api'] },
+      { from: 'spare', to: 'backups' },
+      { from: 'spare', fromPath: ['db'], to: 'ci' },
+    ])
+    arch.universes['org']!.nodes.push(node('spare', 'vps'))
+    const org = openNode(arch, rootPath(arch), 'org')!
+    const viaVps = universeContext(arch, openNode(arch, org, 'vps')!)
+    const viaSpare = universeContext(arch, openNode(arch, org, 'spare')!)
+    expect(viaVps.portals.map((p) => p.id)).toEqual(['portal:1:ci'])
+    expect(viaVps.edges).toEqual([{ id: 'ctx:1:e0', from: 'portal:1:ci', to: 'api' }])
+    expect(viaSpare.portals.map((p) => [p.id, p.role])).toEqual([
+      ['portal:1:backups', 'out'],
+      ['portal:1:ci', 'out'],
+    ])
+    expect(viaSpare.edges).toEqual([{ id: 'ctx:1:e2', from: 'db', to: 'portal:1:ci' }])
+    // The same context after a reload (the hash names the node).
+    expect(universeContext(arch, fromHash(arch, '#/org/vps~spare'))).toEqual(viaSpare)
+  })
+
+  it('has no context when the recorded node does not open the universe', () => {
+    const arch = architecture([], [{ from: 'ci', to: 'vps' }])
+    expect(universeContext(arch, [{ universe: 'root' }, { universe: 'org', node: 'org' }, { universe: 'vps', node: 'ci' }])).toEqual({ portals: [], edges: [] })
   })
 
   it('does not draw a connection into its own sub-universe as a loop', () => {
@@ -110,7 +140,7 @@ describe('universeContext', () => {
 
   it('lists the connections with doors in the details of a node', () => {
     const arch = architecture([], [{ from: 'ci', to: 'vps', toPath: ['api'], label: 'deploy' }])
-    const context = universeContext(arch, ['root', 'org', 'vps'])
+    const context = universeContext(arch, at('root', 'org', 'vps'))
     expect(connectionsOf(arch.universes['vps']!, 'api', context)).toEqual([
       { edgeId: 'ctx:1:e0', direction: 'in', node: arch.universes['org']!.nodes[0], label: 'deploy', external: { universe: 'ORG', level: 1 } },
     ])
@@ -122,7 +152,7 @@ describe('universeContext', () => {
       { from: 'vps', to: 'backups', toGroup: true },
     ])
     arch.universes['org']!.groups = [{ id: 'backups', name: 'Backup site', icon: { type: 'name', name: 'y' } }]
-    const { portals, edges } = universeContext(arch, ['root', 'org', 'vps'])
+    const { portals, edges } = universeContext(arch, at('root', 'org', 'vps'))
     expect(portals.map((p) => [p.id, p.role, p.group, p.node])).toEqual([
       ['portal:1:group:backups', 'in', true, { id: 'backups', name: 'Backup site', icon: { type: 'name', name: 'y' } }],
     ])

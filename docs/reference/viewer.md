@@ -52,8 +52,12 @@ corridor. The computed layout comes back when the universe is reopened or a file
 - The path of universes is kept in the URL hash: `#/platform/eu-west` (ids after the root). The
   browser's back and forward buttons, reloads and shared links all work; an invalid path opens
   its longest valid part.
+- A universe opened by several nodes of the same universe keeps the node it was opened through:
+  its doors and connections are those of that node, and the URL names the node after a `~` when
+  it is not the first of them (`#/platform/eu-west/checkout~checkout-canary`). Back, the
+  breadcrumb and the browser history return to the universe it was opened from.
 - A universe is fitted to the screen on its first visit. Its zoom and position are remembered
-  for the session, and restored when you come back to it.
+  for the session, and restored when you come back to it the same way.
 - With `dev`, the page reloads its data on every change and stays on the same universe.
 
 ## Layout

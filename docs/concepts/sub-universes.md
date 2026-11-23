@@ -139,7 +139,26 @@ In *Platform*: `CI → Cluster → Backups`. In *Cluster*: a `CI` door on the le
 ## Sharing and cycles
 
 - **A universe can be shared**: several nodes, in the same or different files, may open the same
-  file. It is loaded once; this is not a cycle.
+  file. It is loaded once; this is not a cycle. The viewer opens it from each of these nodes with
+  that node's context: its doors and the connections that reach into it come from the node you
+  opened it through, and the breadcrumb and back button return where you came from.
+
+```yaml
+# Two deployments of the same service: both nodes open services/checkout.yml.
+nodes:
+  - id: checkout
+    name: Checkout
+    icon: typescript
+    universe: ./services/checkout.yml
+  - id: checkout-canary
+    name: Checkout canary
+    icon: typescript
+    universe: ./services/checkout.yml
+connections:
+  - from: checkout-canary/api # reaches into the shared universe through the canary
+    to: checkout/api
+    label: shadow traffic
+```
 - **Cycles are errors**: a universe cannot lead back to one of the universes that lead to it. The
   error shows the chain, for example
   `architecture.yml → sub.yml → architecture.yml`.
@@ -155,8 +174,11 @@ In *Platform*: `CI → Cluster → Backups`. In *Cluster*: a `CI` door on the le
 | Browser back / forward | Follow your navigation history. |
 
 The current path is kept in the URL, as universe ids after the root:
-`#/platform/cluster`. Reloading the page or sharing the link opens the same level. An invalid
-path (for example after renaming a universe) opens its longest valid part.
+`#/platform/cluster`. When several nodes of one universe open the same universe, a step opened
+through any of them but the first also names that node, after a `~`:
+`#/platform/cluster/checkout~checkout-canary`. Reloading the page or sharing the link opens the
+same level, through the same node. An invalid path (for example after renaming a universe or a
+node) opens its longest valid part.
 
 Each universe is fitted to the screen the first time you open it, and keeps its zoom and
-position when you come back to it during the session.
+position when you come back to it the same way during the session.

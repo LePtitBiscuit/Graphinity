@@ -4,7 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { initProject, starterFiles } from '../../src/cli/init.ts'
 import { buildViewerData, formatConfigError, loadArchitecture } from '../../src/core/index.ts'
-import { openNode, rootPath } from '../../viewer/src/navigation.ts'
+import { openNode, rootPath, universeIds } from '../../viewer/src/navigation.ts'
 import { project } from '../helpers.ts'
 
 /** Every file and folder under `dir`, relative, with `/`. */
@@ -39,7 +39,7 @@ describe('initProject', () => {
     const { architecture } = result
     expect(Object.keys(architecture.universes)).toEqual(['my-system', 'api'])
     const inside = openNode(architecture, rootPath(architecture), 'api')
-    expect(inside).toEqual(['my-system', 'api'])
+    expect(inside && universeIds(inside)).toEqual(['my-system', 'api'])
     // Connections reach into the sub-universe (paths).
     expect(architecture.universes['my-system']!.edges.map((e) => [e.fromPath, e.toPath])).toContainEqual([undefined, ['server']])
   })

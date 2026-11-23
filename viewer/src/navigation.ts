@@ -1,18 +1,38 @@
-// Navigation between universes, as a stack of universe ids from the root (the breadcrumb).
-// Pure functions: the same universe may be reached through different parents, so the
-// breadcrumb is the path actually taken, not a fixed parent link.
+// Navigation between universes, as a stack of steps from the root (the breadcrumb). Pure
+// functions: the same universe may be reached through different parents, or through several
+// nodes of one parent, so each step records the node that opened it, not just the universe.
 import type { Architecture, ArchitectureEdge, ArchitectureNode, Universe } from '../../src/core/types.ts'
 import type { UniverseContext } from './context.ts'
 
-/** Universe ids, from the root (index 0) to the current universe. Never empty. */
-export type NavigationPath = readonly string[]
+/** One level of the path: a universe, and the node of the previous level that opened it. */
+export interface NavigationStep {
+  universe: string
+  /** Id of the node of the previous universe that opened this one; absent at the root. */
+  node?: string
+}
+
+/** Steps from the root (index 0) to the current universe. Never empty. */
+export type NavigationPath = readonly NavigationStep[]
+
+/** Separates a universe id from the node that opened it in a URL hash step (never in an id). */
+const NODE_SEPARATOR = '~'
 
 export function rootPath(architecture: Architecture): NavigationPath {
-  return [architecture.root]
+  return [{ universe: architecture.root }]
 }
 
 export function currentId(path: NavigationPath): string {
-  return path[path.length - 1]!
+  return path[path.length - 1]!.universe
+}
+
+/** Universe ids of the path, from the root. */
+export function universeIds(path: NavigationPath): string[] {
+  return path.map((step) => step.universe)
+}
+
+/** Identifies a path (the universes and the nodes that opened them). */
+export function pathKey(path: NavigationPath): string {
+  return path.map((step) => (step.node === undefined ? step.universe : `${step.node}${NODE_SEPARATOR}${step.universe}`)).join('/')
 }
 
 export function universeAt(architecture: Architecture, id: string): Universe | undefined {
@@ -22,7 +42,7 @@ export function universeAt(architecture: Architecture, id: string): Universe | u
 /** Opens the sub-universe of a node of the current universe, if it has one. */
 export function openNode(architecture: Architecture, path: NavigationPath, nodeId: string): NavigationPath | undefined {
   const node = universeAt(architecture, currentId(path))?.nodes.find((n) => n.id === nodeId)
-  return node?.universe === undefined ? undefined : [...path, node.universe]
+  return node?.universe === undefined ? undefined : [...path, { universe: node.universe, node: node.id }]
 }
 
 /** Goes back to a breadcrumb level (0 = root). */
@@ -35,33 +55,50 @@ export function up(path: NavigationPath): NavigationPath {
   return goToLevel(path, path.length - 2)
 }
 
-/** Node of `parent` that opens `child` (used to name breadcrumb steps). */
-export function linkingNode(parent: Universe | undefined, child: string): ArchitectureNode | undefined {
-  return parent?.nodes.find((node) => node.universe === child)
+/**
+ * Node of `parent` that opens `child`: the one named by `nodeId` (it must open `child`), or the
+ * first one when no node is named.
+ */
+export function linkingNode(parent: Universe | undefined, child: string, nodeId?: string): ArchitectureNode | undefined {
+  return parent?.nodes.find((node) => node.universe === child && (nodeId === undefined || node.id === nodeId))
 }
 
-/** `#/platform/eu-west` (the root is implicit; empty at the root). */
-export function toHash(path: NavigationPath): string {
-  return path.length <= 1 ? '' : `#/${path.slice(1).map(encodeURIComponent).join('/')}`
+/**
+ * `#/platform/eu-west` (the root is implicit; empty at the root). A step names the node that
+ * opened it (`#/shared~b`) only when it is not the first node of its parent that opens that
+ * universe, so the usual links stay short and older links keep working.
+ */
+export function toHash(architecture: Architecture, path: NavigationPath): string {
+  if (path.length <= 1) return ''
+  const steps = path.slice(1).map((step, index) => {
+    const first = linkingNode(universeAt(architecture, path[index]!.universe), step.universe)
+    const universe = encodeURIComponent(step.universe)
+    return step.node !== undefined && step.node !== first?.id ? `${universe}${NODE_SEPARATOR}${encodeURIComponent(step.node)}` : universe
+  })
+  return `#/${steps.join('/')}`
 }
 
 /**
  * Reads a path from a URL hash, keeping its longest valid prefix: every step must be the
- * sub-universe of a node of the previous one.
+ * sub-universe of a node of the previous one (the named node, or the first that opens it).
  */
 export function fromHash(architecture: Architecture, hash: string): NavigationPath {
-  const path = [architecture.root]
+  const path: NavigationStep[] = [{ universe: architecture.root }]
   const steps = hash.replace(/^#\/?/, '').split('/').filter(Boolean)
   for (const step of steps) {
+    const [universePart = '', nodePart, ...rest] = step.split(NODE_SEPARATOR)
+    if (rest.length > 0) break
     let id: string
+    let nodeId: string | undefined
     try {
-      id = decodeURIComponent(step)
+      id = decodeURIComponent(universePart)
+      nodeId = nodePart === undefined ? undefined : decodeURIComponent(nodePart)
     } catch {
       break
     }
-    const parent = universeAt(architecture, currentId(path))
-    if (!linkingNode(parent, id) || !universeAt(architecture, id)) break
-    path.push(id)
+    const node = linkingNode(universeAt(architecture, currentId(path)), id, nodeId)
+    if (!node || !universeAt(architecture, id)) break
+    path.push({ universe: id, node: node.id })
   }
   return path
 }

@@ -78,6 +78,41 @@ test('reaches a shared universe from each of its parents', async ({ page }) => {
   await expect(node(page, 'webhooks')).toBeVisible()
 })
 
+test('opens a universe shared by two nodes of one universe with the context of the node used', async ({ page }) => {
+  const door = (id: string) => node(page, `portal:2:${id}`)
+  await page.goto('/#/platform/eu-west')
+  await expect(breadcrumb(page)).toHaveText(CLUSTER)
+
+  // Through the canary: only its own connection comes in (ingress), the URL names the node.
+  await node(page, 'checkout-canary').dblclick()
+  await expect(breadcrumb(page)).toHaveText(CHECKOUT)
+  await expect(page).toHaveURL(/#\/platform\/eu-west\/checkout~checkout-canary$/)
+  await expect(door('ingress')).toBeVisible()
+  await expect(door('storefront')).toHaveCount(0)
+  await expect(node(page, 'api')).toBeVisible()
+
+  // Back to the cluster, then in through the main checkout node: its own doors.
+  await backButton(page).click()
+  await expect(breadcrumb(page)).toHaveText(CLUSTER)
+  await expect(page).toHaveURL(/#\/platform\/eu-west$/)
+  await node(page, 'checkout').dblclick()
+  await expect(page).toHaveURL(/#\/platform\/eu-west\/checkout$/)
+  await expect(door('storefront')).toBeVisible()
+  await expect(door('webhooks')).toBeVisible()
+
+  // Browser history and reloads keep the entry point.
+  await page.goBack()
+  await expect(breadcrumb(page)).toHaveText(CLUSTER)
+  await page.goBack()
+  await expect(page).toHaveURL(/checkout~checkout-canary$/)
+  await expect(door('storefront')).toHaveCount(0)
+  await page.reload()
+  await expect(door('ingress')).toBeVisible()
+  await expect(door('storefront')).toHaveCount(0)
+  await page.getByRole('button', { name: 'eu-west-1 cluster', exact: true }).click()
+  await expect(node(page, 'checkout-canary')).toBeVisible()
+})
+
 test('fits a universe on first visit and restores its viewport afterwards', async ({ page }) => {
   await page.goto('/#/platform')
   await expect(node(page, 'eu-west')).toBeVisible()

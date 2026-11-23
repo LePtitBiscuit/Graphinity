@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// One universe at a time, with a breadcrumb of the path taken. The path is mirrored in the URL
-// hash, so browser back/forward and reloads keep the position in the hierarchy.
+// One universe at a time, with a breadcrumb of the path taken (each level remembers the node that
+// opened it, so a universe opened by several nodes keeps the context of the one used). The path
+// is mirrored in the URL hash, so browser back/forward and reloads keep the position.
 import type { Viewport } from '@xyflow/vue'
 import { computed, onBeforeUnmount, onMounted, provide, shallowRef, watch } from 'vue'
 import type { ViewerData } from '../../../src/core/types.ts'
@@ -10,6 +11,7 @@ import {
   fromHash,
   goToLevel,
   openNode,
+  pathKey,
   toHash,
   universeAt,
   up,
@@ -26,31 +28,31 @@ const path = shallowRef<NavigationPath>(fromHash(architecture.value, location.ha
 const selectedId = shallowRef<string>()
 provide(SELECTED_NODE, selectedId)
 
-/** Last viewport of each visited universe (restored when coming back). */
+/** Last viewport of each visited path (restored when coming back), by `pathKey`. */
 const viewports = new Map<string, Viewport>()
 
 // Live reload: stay where we are, as far as the new data allows.
 watch(architecture, (next) => {
   path.value = fromHash(next, location.hash)
-  if (toHash(path.value) !== (location.hash === '#' ? '' : location.hash)) history.replaceState(null, '', urlFor(path.value))
+  if (toHash(next, path.value) !== (location.hash === '#' ? '' : location.hash)) history.replaceState(null, '', urlFor(path.value))
 })
 
 const universe = computed(() => universeAt(architecture.value, currentId(path.value)))
 /** What the ancestors say about the current universe: doors and connections (context.ts). */
-const context = computed(() => ({ ...universeContext(architecture.value, path.value), key: path.value.join('/') }))
+const context = computed(() => ({ ...universeContext(architecture.value, path.value), key: pathKey(path.value) }))
 const parentName = computed(() =>
-  path.value.length > 1 ? (universeAt(architecture.value, path.value[path.value.length - 2]!)?.name ?? '') : undefined,
+  path.value.length > 1 ? (universeAt(architecture.value, path.value[path.value.length - 2]!.universe)?.name ?? '') : undefined,
 )
 const selectedNode = computed(() => universe.value?.nodes.find((node) => node.id === selectedId.value))
 const crumbs = computed(() =>
-  path.value.map((id, level) => ({ id, level, name: universeAt(architecture.value, id)?.name ?? id })),
+  path.value.map(({ universe: id }, level) => ({ id, level, name: universeAt(architecture.value, id)?.name ?? id })),
 )
 
 /** How the current universe was reached (its arrival animation): deeper `in`, higher `out`. */
 const arrival = shallowRef<'in' | 'out'>()
 
 function navigate(next: NavigationPath) {
-  if (next.join('/') === path.value.join('/')) return
+  if (pathKey(next) === pathKey(path.value)) return
   arrival.value = next.length > path.value.length ? 'in' : next.length < path.value.length ? 'out' : undefined
   path.value = next
   selectedId.value = undefined
@@ -58,7 +60,7 @@ function navigate(next: NavigationPath) {
 }
 
 function urlFor(next: NavigationPath): string {
-  return `${location.pathname}${location.search}${toHash(next)}`
+  return `${location.pathname}${location.search}${toHash(architecture.value, next)}`
 }
 
 /** `scrolled`: opened with the scroll wheel, at maximum zoom: that viewport is not kept, the
@@ -66,13 +68,13 @@ function urlFor(next: NavigationPath): string {
 function open(nodeId: string, scrolled = false) {
   const next = openNode(architecture.value, path.value, nodeId)
   if (!next) return
-  if (scrolled) viewports.delete(currentId(path.value))
+  if (scrolled) viewports.delete(pathKey(path.value))
   navigate(next)
 }
 
 /** Back to the parent with the scroll wheel, zoomed out: the parent's own viewport is restored. */
 function leave() {
-  viewports.delete(currentId(path.value))
+  viewports.delete(pathKey(path.value))
   navigate(up(path.value))
 }
 
@@ -89,7 +91,7 @@ function onKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   // Replace an invalid or partial hash with the path actually shown.
-  if (toHash(path.value) !== (location.hash === '#' ? '' : location.hash)) history.replaceState(null, '', urlFor(path.value))
+  if (toHash(architecture.value, path.value) !== (location.hash === '#' ? '' : location.hash)) history.replaceState(null, '', urlFor(path.value))
   addEventListener('popstate', onPopState)
   addEventListener('keydown', onKeydown)
 })
@@ -129,13 +131,14 @@ onBeforeUnmount(() => {
       </ol>
     </nav>
 
-    <!-- Keyed by universe: each visit gets a fresh canvas; its viewport is restored from memory. -->
+    <!-- Keyed by path (a universe opened by another node has other doors): each visit gets a fresh
+         canvas; its viewport is restored from memory. -->
     <UniverseView
       v-if="universe"
-      :key="universe.id"
+      :key="context.key"
       :universe="universe"
       :icons="data.icons"
-      :initial-viewport="viewports.get(universe.id)"
+      :initial-viewport="viewports.get(context.key)"
       :context="context"
       :parent-name="parentName"
       :arrival="arrival"
@@ -143,7 +146,7 @@ onBeforeUnmount(() => {
       @open="open"
       @exit-to="(level) => navigate(goToLevel(path, level))"
       @leave="leave"
-      @viewport="(id, viewport) => viewports.set(id, viewport)"
+      @viewport="(key, viewport) => viewports.set(key, viewport)"
     />
     <p v-else class="status">Universe "{{ currentId(path) }}" is not available.</p>
 

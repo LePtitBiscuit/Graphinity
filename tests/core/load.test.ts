@@ -90,6 +90,42 @@ describe('loadArchitecture - resolution', () => {
     if (result.ok) expect(Object.keys(result.architecture.universes)).toEqual(['root', 'a', 'b', 'shared'])
   })
 
+  it('lets several nodes of one universe open the same file, read once', async () => {
+    const dir = await project({
+      'root.yml': universe(
+        'root',
+        '[{ id: a, name: A, icon: x, universe: sub/shared.yml }, { id: b, name: B, icon: x, universe: ./sub/../sub/shared.yml }, { id: ci, name: CI, icon: x }]',
+        '[{ from: ci, to: a/x }, { from: b/y, to: ci }]',
+      ),
+      'sub/shared.yml': universe('shared', '[{ id: x, name: X, icon: x }, { id: y, name: Y, icon: x }]'),
+    })
+    const result = await loadArchitecture(path.join(dir, 'root.yml'))
+    if (!result.ok) throw new Error(result.errors.map(formatConfigError).join('\n'))
+    const { universes } = result.architecture
+    expect(Object.keys(universes)).toEqual(['root', 'shared'])
+    expect(universes['root']!.nodes.map((n) => [n.id, n.universe])).toEqual([['a', 'shared'], ['b', 'shared'], ['ci', undefined]])
+    // Connections reach into the shared universe through either node.
+    expect(universes['root']!.edges.map((e) => [e.from, e.fromPath, e.to, e.toPath])).toEqual([
+      ['ci', undefined, 'a', ['x']],
+      ['b', ['y'], 'ci', undefined],
+    ])
+    expect(result.files.filter((file) => file.endsWith('shared.yml'))).toHaveLength(1)
+  })
+
+  it('still detects a cycle that goes through a shared universe', async () => {
+    const dir = await project({
+      'root.yml': universe('root', '[{ id: a, name: A, icon: x, universe: shared.yml }, { id: b, name: B, icon: x, universe: shared.yml }]'),
+      'shared.yml': universe('shared', '[{ id: back, name: Back, icon: x, universe: root.yml }]'),
+    })
+    const result = await loadArchitecture(path.join(dir, 'root.yml'))
+    // Reported once, on the node that closes the loop; both parent links are kept.
+    expect(errorsOf(result).map((e) => [e.file, e.field, e.message])).toEqual([
+      ['shared.yml', 'nodes[0].universe', 'Circular universe reference: root.yml → shared.yml → root.yml'],
+    ])
+    expect(result.architecture?.universes['root']!.nodes.map((n) => n.universe)).toEqual(['shared', 'shared'])
+    expect(result.architecture?.universes['shared']!.nodes[0]!.universe).toBeUndefined()
+  })
+
   it('imposes no maximum nesting depth', async () => {
     const depth = 300
     const files: Record<string, string> = {}

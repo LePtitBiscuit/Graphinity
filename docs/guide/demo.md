@@ -30,7 +30,7 @@ kestrel/                        ← project directory (the root file's directory
 │   │   ├── eu-west.yml         ← the primary Kubernetes cluster
 │   │   └── us-east.yml         ← the standby cluster
 │   └── services/
-│       ├── checkout.yml        ← opened from both clusters
+│       ├── checkout.yml        ← opened from both clusters (twice in eu-west)
 │       ├── catalog.yml
 │       └── routing.yml
 ├── data/
@@ -58,7 +58,9 @@ kestrel/                        ← project directory (the root file's directory
 - `platform/platform.yml` - drawn top to bottom: the two regions and the shared services.
   `platform/clusters/eu-west.yml` nests groups on the maximum of 4 levels (cluster ›
   applications › commerce namespace › checkout node pool); `us-east.yml` is the standby copy.
-- `platform/services/checkout.yml` - one universe opened from both clusters. Its `db` node opens
+- `platform/services/checkout.yml` - one universe opened from both clusters, and twice in
+  eu-west: by `checkout` and by `checkout-canary`, which opens it with its own doors (only the
+  ingress sends it traffic). Its `db` node opens
   `data/orders-db.yml`, the fifth level, stored in another folder (its backups bootstrap the
   *Replicas* group: node → group). `catalog.yml` (its `images`
   node, the image resizer, uses the [placement hint](/config/node#placement-hints) `place: last`) and

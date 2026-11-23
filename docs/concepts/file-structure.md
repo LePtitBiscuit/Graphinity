@@ -18,7 +18,7 @@ kestrel/                        ← project directory (the root file's directory
 │   │   ├── eu-west.yml         ← the primary Kubernetes cluster
 │   │   └── us-east.yml         ← the standby cluster
 │   └── services/
-│       ├── checkout.yml        ← opened from both clusters
+│       ├── checkout.yml        ← opened from both clusters (twice in eu-west)
 │       ├── catalog.yml
 │       └── routing.yml
 ├── data/

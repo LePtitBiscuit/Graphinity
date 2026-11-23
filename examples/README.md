@@ -18,7 +18,7 @@ architecture.yml                      Kestrel Logistics (people, Kestrel's syste
 ├─ edge/edge.yml                      Edge network (DNS, CDN, WAF, API gateway, load balancers)
 ├─ platform/platform.yml              Kestrel Platform (two regions, shared services)
 │  ├─ platform/clusters/eu-west.yml   eu-west-1 cluster (groups nested on 4 levels)
-│  │  ├─ platform/services/checkout.yml   Checkout service (also opened from us-east)
+│  │  ├─ platform/services/checkout.yml   Checkout service (opened by checkout and checkout-canary; also from us-east)
 │  │  │  └─ data/orders-db.yml        Orders database (level 5, in another folder)
 │  │  ├─ platform/services/catalog.yml    Catalog service
 │  │  └─ platform/services/routing.yml    Routing service (right to left)
@@ -40,7 +40,8 @@ local image file - (`images/floor-plan.svg`, in the Lyon hub), custom background
 nested up to 4 levels, corner tags, all four directions, styled connections (colors, dashes,
 arrowheads, sides), connections to and from groups (`edge/edge.yml`: group → node,
 `data/orders-db.yml`: node → group, `warehouses/lyon.yml`: group → group), connections that reach several levels down by path
-(`platform/eu-west/checkout/api`, `warehouses/lyon/wms`) and node placement hints (`place: last`
+(`platform/eu-west/checkout/api`, `warehouses/lyon/wms`), a universe opened by two nodes of the
+same universe (`checkout` and `checkout-canary` in `platform/clusters/eu-west.yml`) and node placement hints (`place: last`
 on the image resizer of `platform/services/catalog.yml`, `after: dbt` on the notebooks of
 `data/data.yml`).
 See the [configuration reference](https://leptitbiscuit.github.io/Graphinity/config/) for the
