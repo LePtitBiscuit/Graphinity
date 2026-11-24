@@ -1,6 +1,6 @@
 {
   "name": "graphinity",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Interactive, recursive architecture diagrams from YAML/JSON files: a CLI with live reload and static site generation.",
   "license": "MPL-2.0",
   "homepage": "https://leptitbiscuit.github.io/Graphinity/",
