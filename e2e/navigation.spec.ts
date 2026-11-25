@@ -269,6 +269,11 @@ test('scrolling on at maximum zoom opens the universe of the node closest to the
   const target = visible.sort((a, b) => b.distance - a.distance)[0]!
 
   await page.mouse.move(target.x, target.y)
-  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100)
+  // A pause in the scrolling empties the bar: on a loaded machine, the wheel events can come too
+  // slowly to fill it at once, so the scrolling goes on until a universe opens. It must be this one.
+  await expect(async () => {
+    for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -100)
+    await expect(page).not.toHaveURL(/\/$/, { timeout: 1000 })
+  }).toPass({ timeout: 15_000 })
   await expect(page).toHaveURL(new RegExp(`#/${target.id}$`))
 })
