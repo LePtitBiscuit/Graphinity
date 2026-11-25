@@ -120,8 +120,8 @@ describe('validateUniverse', () => {
       }),
     ).toEqual([
       ['script', 'Unknown field "script" (allowed: id, name, direction, background, groups, nodes, connections)'],
-      ['nodes.0.onClick', 'Unknown field "onClick" (allowed: id, name, icon, description, universe, group, tags, color, border, background, size, place, after)'],
-      ['connections.0.cost', 'Unknown field "cost" (allowed: from, to, label, color, style, arrow)'],
+      ['nodes.0.onClick', 'Unknown field "onClick" (allowed: id, name, icon, description, universe, group, tags, color, border, background, size, place, after, beside)'],
+      ['connections.0.cost', 'Unknown field "cost" (allowed: from, to, label, color, style, arrow, align)'],
     ])
   })
 
@@ -481,10 +481,77 @@ describe('validateUniverse - placement hints', () => {
   it('takes one hint per node', () => {
     const { nodes, issues } = validateUniverse(universe(node('a'), node('b', { place: 'last', after: 'a' })))
     expect(issues.map((i) => [i.path.join('.'), i.message])).toEqual([
-      ['nodes.1.after', 'A node takes one placement hint: "place" is already set (use either place or after)'],
+      ['nodes.1.after', 'A node takes one placement hint: "place" is already set (use one of place, after, beside)'],
     ])
     expect(nodes[1]).toMatchObject({ place: 'last' })
     expect(nodes[1]?.after).toBeUndefined()
+    const both = validateUniverse(universe(node('a'), node('b', { after: 'a', beside: 'a' }), node('c', { place: 'first', beside: 'a' })))
+    expect(both.issues.map((i) => [i.path.join('.'), i.message])).toEqual([
+      ['nodes.1.beside', 'A node takes one placement hint: "after" is already set (use one of place, after, beside)'],
+      ['nodes.2.beside', 'A node takes one placement hint: "place" is already set (use one of place, after, beside)'],
+    ])
+    expect(both.nodes.map((n) => n?.beside)).toEqual([undefined, undefined, undefined])
+  })
+
+  it('reads beside, a node of the same group', () => {
+    const groups = [{ id: 'g', name: 'G' }]
+    const { nodes, issues } = validateUniverse({ ...universe(node('a'), node('b', { beside: 'a' }), node('c', { group: 'g' }), node('d', { group: 'g', beside: 'c' })), groups })
+    expect(issues).toEqual([])
+    expect(nodes.map((n) => n?.beside)).toEqual([undefined, 'a', undefined, 'c'])
+  })
+
+  it('reports an invalid beside and leaves it out', () => {
+    const groups = [{ id: 'g', name: 'G' }]
+    const { nodes, issues } = validateUniverse({
+      ...universe(node('a'), node('b', { beside: 'nope' }), node('c', { beside: 'c' }), node('d', { group: 'g', beside: 'a' }), node('e', { beside: 2 })),
+      groups,
+    })
+    expect(issues.map((i) => [i.path.join('.'), i.message])).toEqual([
+      ['nodes.4.beside', '"beside" must be a string, got number'],
+      ['nodes.1.beside', 'Unknown node "nope" (placement hints reference nodes of the same universe)'],
+      ['nodes.2.beside', 'A node cannot be placed beside itself ("c")'],
+      ['nodes.3.beside', '"d" (in group "g") and "a" (outside any group) cannot be side by side: only nodes of the same group can be aligned'],
+    ])
+    expect(nodes.map((n) => n?.beside)).toEqual([undefined, undefined, undefined, undefined, undefined])
+  })
+
+  it('reads align on connections between two nodes of the same group', () => {
+    const groups = [{ id: 'g', name: 'G' }]
+    const { universe: read, issues } = validateUniverse({
+      ...universe(node('a'), node('b'), node('c', { group: 'g' }), node('d', { group: 'g' })),
+      groups,
+      connections: [
+        { from: 'a', to: 'b', align: true },
+        { from: 'c', to: 'd', align: true },
+        { from: 'a', to: 'c', align: false },
+      ],
+    })
+    expect(issues).toEqual([])
+    expect(read?.edges.map((e) => e.align)).toEqual([true, true, undefined])
+  })
+
+  it('reports an invalid align and draws the connection without it', () => {
+    const groups = [{ id: 'g', name: 'G' }]
+    const { universe: read, issues } = validateUniverse({
+      ...universe(node('a'), node('b', { group: 'g' }), node('c', { universe: 'c.yml' })),
+      groups,
+      connections: [
+        { from: 'a', to: 'b', align: true },
+        { from: 'a', to: 'g', align: true },
+        { from: 'a', to: 'c/x', align: true },
+        { from: 'a', to: 'a', align: true },
+        { from: 'a', to: 'c', align: 'yes' },
+      ],
+    })
+    expect(issues.map((i) => [i.path.join('.'), i.message])).toEqual([
+      ['connections.0.align', '"a" (outside any group) and "b" (in group "g") cannot be side by side: only nodes of the same group can be aligned'],
+      ['connections.1.align', '"align" keeps two nodes side by side: its ends must be nodes of this universe, not groups or paths into sub-universes'],
+      ['connections.2.align', '"align" keeps two nodes side by side: its ends must be nodes of this universe, not groups or paths into sub-universes'],
+      ['connections.3.align', 'A connection from a node to itself cannot be aligned ("a")'],
+      ['connections.4.align', '"align" must be true or false, got "yes"'],
+    ])
+    expect(read?.edges).toHaveLength(5)
+    expect(read?.edges.some((e) => e.align)).toBe(false)
   })
 
   it('reports hints that lead back to their node', () => {

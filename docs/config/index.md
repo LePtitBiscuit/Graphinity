@@ -17,8 +17,8 @@ Universe                     a file
 | ------ | ---------- |
 | [Universe](/config/universe) | `id`, `name`, `direction`, `background`, `groups`, `nodes`, `connections` |
 | [Universe background](/config/universe#background) | `image`, `color`, `blur`, `grid` |
-| [Node](/config/node) | `id`, `name`, `icon`, `description`, `universe`, `group`, `tags`, `color`, `border`, `background`, `size`, `place`, `after` |
-| [Connection](/config/connection) | `from`, `to`, `label`, `color`, `style`, `arrow` |
+| [Node](/config/node) | `id`, `name`, `icon`, `description`, `universe`, `group`, `tags`, `color`, `border`, `background`, `size`, `place`, `after`, `beside` |
+| [Connection](/config/connection) | `from`, `to`, `label`, `color`, `style`, `arrow`, `align` |
 | [Connection end](/config/connection#ends-and-sides) | a node or group id, or a node path, or `node` or `group`, `side` |
 | [Group](/config/group) | `id`, `name`, `icon`, `color`, `border`, `blur`, `group`, `background` |
 | [Tag](/config/tags) | a text or a number, or `text`, `corner` |
@@ -39,7 +39,7 @@ Shared value formats: [icons](/config/icons) and [colors](/config/colors-and-sty
   inside the project directory.
 - **Order**: the order of properties does not matter; the order of nodes guides the layout
   between equivalent placements. Positions are computed: a node can only take a
-  [placement hint](/config/node#placement-hints) (`place`, `after`), never coordinates.
+  [placement hint](/config/node#placement-hints) (`place`, `after`, `beside`), never coordinates.
 
 ## Minimal file
 

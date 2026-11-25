@@ -316,6 +316,8 @@ export interface Connection {
   toSide?: Side
   /** Size of its label, if it has one. */
   label?: { width: number; height: number }
+  /** Its nodes share a layer of the flow: no side is preferred (it goes across the flow). */
+  across?: boolean
   /**
    * A route to keep when every simple route goes through a node (the layout's, ELK's), and for a
    * connection from a node to itself.
@@ -383,7 +385,7 @@ export function routeAll(
     const target = boxes.get(connection.to)
     if (!source || !target || connection.from === connection.to) return { connection, points: copy(connection.fallback), fixed: true, obstacles: [] }
     const obstacles = entries.filter(([id, box]) => id !== connection.from && id !== connection.to && !box.frame).map(([, box]) => box)
-    const route = routeAround(source, target, obstacles, configured(connection), [], {}, flow, keepClear)
+    const route = routeAround(source, target, obstacles, configured(connection), [], {}, connection.across ? undefined : flow, keepClear)
     if (route.cost >= CROSSING_COST && (connection.fallback?.length ?? 0) >= 2) {
       const points = copy(connection.fallback)
       const [from, to] = [shiftOf(points[0]!, source).side, shiftOf(points.at(-1)!, target).side]
@@ -496,6 +498,9 @@ function departure(points: readonly Point[], side: Side, end: 'from' | 'to'): De
   const along = (p: Point) => (side === 'left' || side === 'right' ? p.y : p.x)
   const across = (p: Point) => (side === 'left' || side === 'right' ? p.x : p.y)
   const far = along(route.at(-1)!)
+  // A small step between facing ends (straightened later): straight on, ordered by where it ends.
+  // Seen as turns, two parallel routes would be ordered the opposite way on their two nodes.
+  if (route.length <= 4 && Math.abs(far - along(route[0]!)) <= STRAIGHTEN_MAX) return { turn: 0, depth: Infinity, far }
   for (let i = 0; i < route.length - 1; i++) {
     const delta = along(route[i + 1]!) - along(route[i]!)
     if (delta !== 0) return { turn: Math.sign(delta), depth: Math.abs(across(route[i]!) - across(route[0]!)), far }

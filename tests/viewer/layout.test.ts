@@ -232,6 +232,56 @@ describe('layoutUniverse', async () => {
     expect(first('e')).toBe(first('a'))
   })
 
+  it.each(['right', 'down', 'left', 'up'] as const)('keeps aligned nodes side by side, and connects them straight (%s)', async (direction) => {
+    const node = (id: string, extra: object = {}) => ({ id, name: id, icon: { type: 'name' as const, name: 'x' }, ...extra })
+    const universe: Universe = {
+      id: 'u',
+      name: 'U',
+      direction,
+      source: 'u.yml',
+      groups: [{ id: 'g', name: 'G' }],
+      // a → b ⇢ c (aligned) → e; d beside c without a connection; x ⇢ y aligned inside the group.
+      nodes: [node('a'), node('b'), node('c'), node('d', { beside: 'c' }), node('e'), node('x', { group: 'g' }), node('y', { group: 'g' })],
+      edges: [
+        { id: 'e0', from: 'a', to: 'b', label: 'HTTPS' },
+        { id: 'e1', from: 'b', to: 'c', label: 'sync', align: true },
+        { id: 'e2', from: 'c', to: 'e' },
+        { id: 'e3', from: 'e', to: 'x' },
+        { id: 'e4', from: 'x', to: 'y', align: true },
+        { id: 'e5', from: 'd', to: 'b' }, // between nodes of one layer: drawn across, it moves nothing
+      ],
+    }
+    const layout = await layoutUniverse(universe, measure)
+    checkLayout(layout, direction)
+    const vertical = direction === 'down' || direction === 'up'
+    const sign = direction === 'left' || direction === 'up' ? -1 : 1
+    const box = (id: string) => layout.nodes.find((laid) => laid.node.id === id)!
+    /** Position along the flow (larger is further), and across it. */
+    const along = (id: string) => sign * (vertical ? box(id).y : box(id).x)
+    const across = (id: string) => (vertical ? box(id).x : box(id).y)
+    // One layer: b, c and d (b ⇢ c, d beside c); x and y in the group.
+    expect(along('c')).toBe(along('b'))
+    expect(along('d')).toBe(along('b'))
+    expect(along('y')).toBe(along('x'))
+    expect(new Set([across('b'), across('c'), across('d')]).size).toBe(3)
+    // The other connections still order the flow.
+    expect(along('b')).toBeGreaterThan(along('a'))
+    expect(along('e')).toBeGreaterThan(along('c'))
+    // An aligned connection goes straight across the layer, from one tile to the other.
+    for (const id of ['e1', 'e4']) {
+      const points = layout.edges.find((laid) => laid.id === id)!.points
+      expect(points, id).toHaveLength(2)
+      expect(vertical ? points[0]!.y === points[1]!.y : points[0]!.x === points[1]!.x, `${id} is straight`).toBe(true)
+    }
+    // Without the hints, the connection b → c moves c one layer further.
+    const plain = await layoutUniverse(
+      { ...universe, nodes: universe.nodes.map(({ beside: _b, ...n }) => n), edges: universe.edges.map(({ align: _a, ...e }) => e) },
+      measure,
+    )
+    const plainAlong = (id: string) => sign * (vertical ? plain.nodes.find((n) => n.node.id === id)!.y : plain.nodes.find((n) => n.node.id === id)!.x)
+    expect(plainAlong('c')).toBeGreaterThan(plainAlong('b'))
+  })
+
   it('replaces a detour around a group by a direct route', async () => {
     // The group holds a target of the hub (obs) and a source of it (reg): ELK keeps the group in
     // one layer, so reg → hub goes against the flow and around the diagram.

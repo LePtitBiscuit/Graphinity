@@ -88,6 +88,11 @@ export interface LaidOutEdge {
   /** Start point, bend points, end point (from the side of the source tile, or frame, to the target's). */
   points: Point[]
   label?: Rect & { text: string }
+  /**
+   * Its nodes share a layer of the flow (`align`, `beside`): it goes across the flow, so the
+   * router prefers no side (its route is drawn by the router only, ELK does not see it).
+   */
+  across?: true
 }
 
 export interface UniverseLayout {
@@ -127,6 +132,12 @@ const LAYOUT_OPTIONS: Record<string, string> = {
   // closing a loop could then move a whole branch.)
   'elk.layered.cycleBreaking.strategy': 'DEPTH_FIRST',
   'elk.edgeLabels.placement': 'CENTER',
+}
+
+/** When the layers are chosen by Graphinity (`sharedLayers`): ELK follows the positions given. */
+const INTERACTIVE_LAYERS: Record<string, string> = {
+  'elk.layered.layering.strategy': 'INTERACTIVE',
+  'elk.layered.cycleBreaking.strategy': 'INTERACTIVE',
 }
 
 // ELK is most of the bundle: loaded as a separate chunk, starting as soon as this module loads.
@@ -170,9 +181,15 @@ const centerOf = (shape: ElkNode | undefined): Point => ({ x: (shape?.x ?? 0) + 
  * placed by the first pass: along a left or right side by the other node's height, along a top or
  * bottom side by its horizontal position. Ports in that order do not make connections cross.
  */
-function spreadPorts(universe: Universe, ends: readonly { from: Side; to: Side }[], shapes: ReadonlyMap<string, ElkNode>): Map<string, PortSpread> {
+function spreadPorts(
+  universe: Universe,
+  ends: readonly { from: Side; to: Side }[],
+  shapes: ReadonlyMap<string, ElkNode>,
+  isFree: (key: string) => boolean,
+): Map<string, PortSpread> {
   const bySide = new Map<string, { key: string; other: Point; index: number }[]>()
   universe.edges.forEach((edge, index) => {
+    if (isFree(edgeKey(edge.id))) return
     for (const end of ['from', 'to'] as const) {
       // A group has no ports (see `build`).
       if (end === 'from' ? edge.fromGroup : edge.toGroup) continue
@@ -191,6 +208,171 @@ function spreadPorts(universe: Universe, ends: readonly { from: Side; to: Side }
     spreads.set(key, list.map((end) => end.key))
   }
   return spreads
+}
+
+/** Kept on each side of a label placed between two layers chosen by Graphinity. */
+const LABEL_ROOM = 16
+
+/** Distance between two layers given to ELK as positions: larger than any node or group. */
+const LAYER_STEP = 100_000
+
+/**
+ * Layers chosen by Graphinity, for a universe where nodes share a layer (`beside`, `align`): ELK
+ * cannot keep two nodes in one layer, so the layers are computed here and given to ELK as
+ * positions (its `INTERACTIVE` layering). `undefined` when no node shares a layer: ELK chooses.
+ *
+ * Each group lays out its own content (ELK's hierarchy): the layers are computed per container
+ * (the universe, or a group), between its children (nodes and groups). Nodes kept together form
+ * one class, which takes one layer; a connection between two nodes of a class (`free`) leaves the
+ * layering, and ELK does not see it: the router draws it across. Like ELK's `DEPTH_FIRST` cycle
+ * breaking, the arrows are followed from the classes without incoming connections, in the order
+ * of the file, and a connection closing a loop goes against the flow; each class then takes the
+ * longest path to it, and a class without incoming connections is drawn just before the first
+ * one it leads to.
+ */
+function sharedLayers(
+  universe: Universe,
+  groups: ReadonlyMap<string, ArchitectureGroup>,
+  options: LayoutOptions,
+): { layers: Map<string, number>; free: Set<string> } | undefined {
+  const nodes = new Map(universe.nodes.map((node) => [node.id, node]))
+  const together: [string, string][] = []
+  for (const node of universe.nodes) if (node.beside !== undefined && nodes.has(node.beside)) together.push([node.id, node.beside])
+  for (const edge of universe.edges) {
+    if (edge.align && !edge.fromGroup && !edge.toGroup && nodes.has(edge.from) && nodes.has(edge.to)) together.push([edge.from, edge.to])
+  }
+  if (together.length === 0) return undefined
+
+  // Containers and their children (ELK keys), in the order `build` adds them.
+  const containerOf = new Map<string, string>()
+  const children = new Map<string, string[]>([['root', []]])
+  const add = (key: string, container: string) => {
+    if (containerOf.has(key)) return
+    containerOf.set(key, container)
+    children.set(container, [...(children.get(container) ?? []), key])
+  }
+  const addGroup = (group: ArchitectureGroup, depth = 0): string => {
+    const key = groupKey(group.id)
+    if (containerOf.has(key)) return key
+    const parent = group.group === undefined || depth > 16 ? undefined : groups.get(group.group)
+    add(key, parent ? addGroup(parent, depth + 1) : 'root')
+    return key
+  }
+  for (const node of universe.nodes) {
+    const group = node.group === undefined ? undefined : groups.get(node.group)
+    add(nodeKey(node.id), group ? addGroup(group) : 'root')
+  }
+  const order = new Map([...children.values()].flatMap((list) => list.map((key, index) => [key, index] as const)))
+
+  // Classes: union-find over the nodes kept together (of one container).
+  const parent = new Map<string, string>()
+  const find = (key: string): string => {
+    const up = parent.get(key)
+    if (up === undefined || up === key) return key
+    const root = find(up)
+    parent.set(key, root)
+    return root
+  }
+  for (const [a, b] of together) {
+    const [ka, kb] = [nodeKey(a), nodeKey(b)]
+    if (containerOf.get(ka) !== containerOf.get(kb)) continue
+    const [ra, rb] = [find(ka), find(kb)]
+    if (ra !== rb) parent.set(order.get(ra)! <= order.get(rb)! ? rb : ra, order.get(ra)! <= order.get(rb)! ? ra : rb)
+  }
+
+  // The connections ELK lays out (visible, and the invisible ones of `after`), between the
+  // children of the container that holds both ends.
+  const chain = (key: string): string[] => {
+    const keys = [key]
+    for (let at = containerOf.get(key); at !== undefined && keys.length < 32; at = containerOf.get(at)) keys.push(at)
+    return keys
+  }
+  const links = new Map<string, [string, string][]>()
+  const free = new Set<string>()
+  const link = (id: string, from: string, to: string) => {
+    if (from === to || !containerOf.has(from) || !containerOf.has(to)) return
+    const [up, down] = [chain(from), chain(to)]
+    const common = up.find((key) => down.includes(key) && key !== from && key !== to)
+    if (common === undefined) return
+    const a = up[up.indexOf(common) - 1]!
+    const b = down[down.indexOf(common) - 1]!
+    if (a === b) return
+    if (find(a) === find(b)) free.add(id)
+    else links.set(common, [...(links.get(common) ?? []), [find(a), find(b)]])
+  }
+  for (const edge of universe.edges) link(edgeKey(edge.id), shapeKey(edge, 'from'), shapeKey(edge, 'to'))
+  for (const node of universe.nodes) if (node.after !== undefined && nodes.has(node.after)) link(hiddenKey(node.id), nodeKey(node.after), nodeKey(node.id))
+
+  const layers = new Map<string, number>()
+  for (const [container, keys] of children) {
+    const classes = [...new Set(keys.map(find))]
+    const has = (cls: string, test: (node: ArchitectureNode) => boolean) =>
+      keys.some((key) => find(key) === cls && key.startsWith('n:') && test(nodes.get(key.slice(2))!))
+    const first = new Set(classes.filter((cls) => has(cls, (node) => options.first?.has(node.id) === true || node.place === 'first')))
+    const last = new Set(classes.filter((cls) => !first.has(cls) && has(cls, (node) => options.last?.has(node.id) === true || node.place === 'last')))
+    // Arrows into a first class, or out of a last one, go against the flow.
+    const arrows = (links.get(container) ?? []).map(([a, b]): [string, string] => (first.has(b) || last.has(a) ? [b, a] : [a, b]))
+    const next = new Map<string, string[]>(classes.map((cls) => [cls, []]))
+    const incoming = new Map<string, number>(classes.map((cls) => [cls, 0]))
+    for (const [a, b] of arrows) {
+      next.get(a)?.push(b)
+      incoming.set(b, (incoming.get(b) ?? 0) + 1)
+    }
+    // Loops: depth first from the classes without incoming arrows, then the others, in order.
+    const forward = new Map<string, string[]>(classes.map((cls) => [cls, []]))
+    const state = new Map<string, 'open' | 'done'>()
+    const visit = (cls: string) => {
+      state.set(cls, 'open')
+      for (const to of next.get(cls) ?? []) {
+        if (state.get(to) === 'open') forward.get(to)!.push(cls)
+        else {
+          forward.get(cls)!.push(to)
+          if (!state.has(to)) visit(to)
+        }
+      }
+      state.set(cls, 'done')
+    }
+    for (const cls of classes) if (incoming.get(cls) === 0 && !state.has(cls)) visit(cls)
+    for (const cls of classes) if (!state.has(cls)) visit(cls)
+    // Longest path, in topological order.
+    const before = new Map<string, string[]>(classes.map((cls) => [cls, []]))
+    for (const [from, targets] of forward) for (const to of targets) before.get(to)!.push(from)
+    const sorted: string[] = []
+    const placed = new Set<string>()
+    const place = (cls: string) => {
+      if (placed.has(cls)) return
+      placed.add(cls)
+      for (const from of before.get(cls)!) place(from)
+      sorted.push(cls)
+    }
+    for (const cls of classes) place(cls)
+    const layer = new Map<string, number>()
+    for (const cls of sorted) layer.set(cls, Math.max(0, ...before.get(cls)!.map((from) => layer.get(from)! + 1)))
+    // A class nothing leads to sits just before the first one it leads to.
+    for (const cls of [...sorted].reverse()) {
+      const targets = forward.get(cls)!
+      if (before.get(cls)!.length === 0 && !first.has(cls) && targets.length > 0) layer.set(cls, Math.min(...targets.map((to) => layer.get(to)!)) - 1)
+    }
+    const end = Math.max(0, ...layer.values())
+    for (const cls of last) layer.set(cls, end)
+    const start = Math.min(0, ...layer.values())
+    for (const key of keys) layers.set(key, layer.get(find(key))! - start)
+  }
+  return { layers, free }
+}
+
+/** The position that puts a shape in `layer` of the flow (ELK's `INTERACTIVE` layering). */
+function layerPosition(layer: number, direction: Direction): Point {
+  switch (direction) {
+    case 'right':
+      return { x: layer * LAYER_STEP, y: 0 }
+    case 'left':
+      return { x: -layer * LAYER_STEP, y: 0 }
+    case 'down':
+      return { x: 0, y: layer * LAYER_STEP }
+    case 'up':
+      return { x: 0, y: -layer * LAYER_STEP }
+  }
 }
 
 /** 0 for a group at the top, 1 inside another group, and so on. */
@@ -265,10 +447,15 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
   const geometries = new Map(
     universe.nodes.map((node) => [node.id, { ...nodeGeometry(node.size), ...(node.universe !== undefined && { behind: BEHIND_OFFSET }) }]),
   )
+  // Nodes sharing a layer (`beside`, `align`): the layers are chosen here (see `sharedLayers`).
+  const shared = sharedLayers(universe, groups, options)
+  /** Connections ELK does not see (across a layer): the router draws them. */
+  const isFree = (key: string) => shared?.free.has(key) === true
   /** The sides each node needs a port on. */
   const sides = new Map<string, Set<Side>>(universe.nodes.map((node) => [node.id, new Set([defaults.in, defaults.out])]))
   const ends = universe.edges.map((edge) => ({ from: edge.fromSide ?? defaults.out, to: edge.toSide ?? defaults.in }))
   universe.edges.forEach((edge, index) => {
+    if (isFree(edgeKey(edge.id))) return
     if (!edge.fromGroup) sides.get(edge.from)?.add(ends[index]!.from)
     if (!edge.toGroup) sides.get(edge.to)?.add(ends[index]!.to)
   })
@@ -281,6 +468,31 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
       : { text: ' ', width: 1, height: 1 },
   )
 
+  // Layers chosen here: ELK places no labels, so the gaps leave room for them: between the layers
+  // for the largest label along the flow; inside a layer for every label across it between the
+  // same two nodes, one after the other along their parallel lines (half as much again, as the
+  // router places labels at fixed stops along a line).
+  const vertical = direction === 'down' || direction === 'up'
+  const along = Math.max(
+    32,
+    ...universe.edges.flatMap((edge, index) => (edge.label && !isFree(edgeKey(edge.id)) ? [labels[index]![vertical ? 'height' : 'width'] + 2 * LABEL_ROOM] : [])),
+  )
+  const acrossPairs = new Map<string, number[]>()
+  universe.edges.forEach((edge, index) => {
+    if (!edge.label || !isFree(edgeKey(edge.id))) return
+    const pair = [edge.from, edge.to].sort().join('\u0000')
+    acrossPairs.set(pair, [...(acrossPairs.get(pair) ?? []), labels[index]![vertical ? 'width' : 'height']])
+  })
+  const across = Math.max(
+    32,
+    ...[...acrossPairs.values()].map((sizes) => (sizes.length === 1 ? sizes[0]! : 1.5 * sizes.reduce((sum, size) => sum + size, 0)) + 2 * LABEL_ROOM),
+  )
+  const sharedOptions: Record<string, string> | undefined = shared && {
+    ...INTERACTIVE_LAYERS,
+    'elk.layered.spacing.nodeNodeBetweenLayers': String(along),
+    'elk.spacing.nodeNode': String(across),
+  }
+
   /**
    * The ELK graph. Without `ports`, one port per node and side, shared by its connections (first
    * pass). With them, one port per connection end, spread along the side of the tile (second pass).
@@ -289,14 +501,21 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
     // Groups take the place of their first node, so the file order still guides the layout. A
     // group inside another one is laid out inside it (the engine guarantees a tree).
     const rootChildren: ElkNode[] = []
+    /** The position of a shape in its layer, when the layers are chosen here. */
+    const at = (key: string): Partial<Point> => {
+      const layer = shared?.layers.get(key)
+      return layer === undefined ? {} : layerPosition(layer, direction)
+    }
     const groupNodes = new Map<string, ElkNode>()
     const groupNode = (group: ArchitectureGroup, depth = 0): ElkNode => {
       let elkGroup = groupNodes.get(group.id)
       if (elkGroup) return elkGroup
       elkGroup = {
         id: groupKey(group.id),
+        ...at(groupKey(group.id)),
         layoutOptions: {
           'elk.padding': `[top=${GROUP_HEADER},left=${GROUP_PADDING},bottom=${GROUP_PADDING},right=${GROUP_PADDING}]`,
+          ...sharedOptions,
         },
         children: [],
       }
@@ -320,6 +539,7 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
       const layer = options.first?.has(node.id) || node.place === 'first' ? 'FIRST' : options.last?.has(node.id) || node.place === 'last' ? 'LAST' : undefined
       const elkNode: ElkNode = {
         id: nodeKey(node.id),
+        ...at(nodeKey(node.id)),
         width: geometry.width,
         height,
         layoutOptions: {
@@ -336,21 +556,27 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
       layoutOptions: {
         ...LAYOUT_OPTIONS,
         'elk.direction': ELK_DIRECTIONS[direction] ?? 'RIGHT',
+        ...sharedOptions,
       },
       children: rootChildren,
       edges: [
-        ...universe.edges.map((edge, index) => {
+        ...universe.edges.flatMap((edge, index) => {
+          if (isFree(edgeKey(edge.id))) return []
           // A connection to a group attaches to the group itself, without a port: ELK (0.12) fails
           // on ports of groups inside groups in vertical flows, and the sides are drawn by routeAll.
           const port = (end: 'from' | 'to') => {
             const [id, group, side] = end === 'from' ? [edge.from, edge.fromGroup, ends[index]!.from] : [edge.to, edge.toGroup, ends[index]!.to]
             return group ? groupKey(id) : pass.ports ? endKey(edge.id, end) : portKey(id, side)
           }
-          return { id: edgeKey(edge.id), sources: [port('from')], targets: [port('to')], labels: [labels[index]!] }
+          // Layers chosen here: no labels for ELK, which would put them in layers of their own
+          // (the router places them, in the room left between the layers).
+          return [{ id: edgeKey(edge.id), sources: [port('from')], targets: [port('to')], ...(!shared && { labels: [labels[index]!] }) }]
         }),
         // `after`: an invisible connection from that node, so that this one comes later in the flow.
         ...universe.nodes.flatMap((node) =>
-          node.after !== undefined && heights.has(node.after) ? [{ id: hiddenKey(node.id), sources: [nodeKey(node.after)], targets: [nodeKey(node.id)] }] : [],
+          node.after !== undefined && heights.has(node.after) && !isFree(hiddenKey(node.id))
+            ? [{ id: hiddenKey(node.id), sources: [nodeKey(node.after)], targets: [nodeKey(node.id)] }]
+            : [],
         ),
       ],
     }
@@ -367,7 +593,7 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
 
   // Second pass, when a side carries several connections: each gets its own port, ordered as the
   // other ends were placed by the first pass, so that they do not cross.
-  const ports = spreadPorts(universe, ends, shapes)
+  const ports = spreadPorts(universe, ends, shapes, isFree)
   if ([...ports.values()].some((list) => list.length > 1)) {
     shapes.clear()
     routes.clear()
@@ -392,10 +618,11 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
     groups: [...laidGroups].sort((a, b) => groupDepth(a.group, groups) - groupDepth(b.group, groups)),
     nodes: laidNodes,
     edges: reroute(
-      elkEdges(universe, routes, ends, geometries),
+      elkEdges(universe, routes, ends, geometries, labels).map((laid) => (isFree(edgeKey(laid.id)) ? { ...laid, across: true as const } : laid)),
       boxes,
       defaults,
       laidGroups.map((laid) => groupTitle(laid, laid.group.name)),
+      shared !== undefined,
     ),
   }
 }
@@ -420,6 +647,8 @@ function reroute(
   flow: { out: Side; in: Side },
   /** Group titles, kept clear of labels. */
   headers: readonly Rect[],
+  /** ELK placed no labels (layers chosen by Graphinity): the router's routes are always taken. */
+  routerOnly = false,
 ): LaidOutEdge[] {
   const planned = routeAll(
     boxes,
@@ -430,6 +659,7 @@ function reroute(
       ...(laid.edge.fromSide && { fromSide: laid.edge.fromSide }),
       ...(laid.edge.toSide && { toSide: laid.edge.toSide }),
       ...(laid.label && { label: { width: laid.label.width, height: laid.label.height } }),
+      ...(laid.across && { across: true }),
       fallback: laid.points,
     })),
     flow,
@@ -443,7 +673,9 @@ function reroute(
   })
   // Never worse than ELK: its routes stay when they cross and overlap each other less, and keep
   // the sides set in the configuration (ELK chooses the sides of groups itself).
-  return tangle(rerouted) <= tangle(edges) || !edges.every((laid) => keepsGroupSides(laid, boxes)) ? rerouted : edges
+  const chosen = routerOnly || tangle(rerouted) <= tangle(edges) || !edges.every((laid) => keepsGroupSides(laid, boxes)) ? rerouted : edges
+  // A connection ELK did not lay out (across a layer) has only the router's route.
+  return chosen.map((laid, index) => (laid.points.length < 2 ? rerouted[index]! : laid))
 }
 
 /** Does an ELK route leave and enter the groups at its ends by the sides set in the configuration? */
@@ -485,6 +717,8 @@ function elkEdges(
   routes: ReadonlyMap<string, ElkExtendedEdge>,
   ends: readonly { from: Side; to: Side }[],
   geometries: ReadonlyMap<string, NodeGeometry>,
+  /** The size of each label (its place comes from ELK, or from the router when ELK has none). */
+  sizes: readonly { width: number; height: number }[],
 ): LaidOutEdge[] {
   return universe.edges.map((edge, index) => {
     const laid = routes.get(edgeKey(edge.id))
@@ -496,17 +730,17 @@ function elkEdges(
       if (!edge.fromGroup) points[0] = toTile(points[0]!, from, geometries.get(edge.from) ?? nodeGeometry(undefined))
       if (!edge.toGroup) points[points.length - 1] = toTile(points[points.length - 1]!, to, geometries.get(edge.to) ?? nodeGeometry(undefined))
     }
-    const label = laid?.labels?.[0]
+    // Without a label from ELK, its size only: the router places it.
+    const label = laid?.labels?.[0] ?? { x: 0, y: 0, ...sizes[index]! }
     return {
       edge,
       id: edge.id,
       from: endOf(edge, 'from'),
       to: endOf(edge, 'to'),
       points: points.map(({ x, y }) => ({ x, y })),
-      ...(edge.label &&
-        label && {
-          label: { text: edge.label, x: label.x ?? 0, y: label.y ?? 0, width: label.width ?? 0, height: label.height ?? 0 },
-        }),
+      ...(edge.label && {
+        label: { text: edge.label, x: label.x ?? 0, y: label.y ?? 0, width: label.width ?? 0, height: label.height ?? 0 },
+      }),
     }
   })
 }

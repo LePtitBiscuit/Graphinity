@@ -83,7 +83,7 @@ export function universeContext(architecture: Architecture, path: NavigationPath
       // A group is in the universe that declares it, never on the way down: always a door.
       const from: End = edge.fromGroup ? { kind: 'external', level, node: edge.from, group: true } : classify([edge.from, ...(edge.fromPath ?? [])], level)
       const to: End = edge.toGroup ? { kind: 'external', level, node: edge.to, group: true } : classify([edge.to, ...(edge.toPath ?? [])], level)
-      const { id: _id, from: _f, to: _t, fromPath: _fp, toPath: _tp, fromGroup: _fg, toGroup: _tg, fromSide, toSide, ...style } = edge
+      const { id: _id, from: _f, to: _t, fromPath: _fp, toPath: _tp, fromGroup: _fg, toGroup: _tg, align: _al, fromSide, toSide, ...style } = edge
       const id = `ctx:${level}:${edge.id}`
       if (from.kind === 'inside' && to.kind === 'inside') {
         edges.push({

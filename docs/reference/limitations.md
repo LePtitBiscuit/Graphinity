@@ -31,9 +31,10 @@ implementation, not a hidden feature.
   that share a side are spread along it automatically.
 - **No manual positions.** Positions are always computed; the files cannot store coordinates.
   The only hints are [`place`](/config/node#placement-hints) (`first` or `last` layer of the
-  flow) and [`after`](/config/node#placement-hints) (further along the flow than another node).
-  There is no hint to put a node in the same column or row as another one: the layered layout
-  could not keep it reliably.
+  flow), [`after`](/config/node#placement-hints) (further along the flow than another node) and
+  [`beside`](/config/node#side-by-side) (in the same layer as another node), and
+  [`align`](/config/connection#side-by-side) on a connection. Nodes of different groups cannot
+  share a layer (each group lays out its own nodes).
 - **Icons**: [Iconify collections](/config/icons#any-iconify-collection), Dashboard Icons and
   local images - no remote image URLs, and only plain Iconify icons and aliases (no rotated or
   flipped variants).

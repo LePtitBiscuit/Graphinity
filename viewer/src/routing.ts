@@ -87,6 +87,7 @@ function routesOf(flow: ReturnType<typeof useVueFlow<FlowNode, RoutedFlowEdge>>)
           ...(data?.fromSide && { fromSide: data.fromSide }),
           ...(data?.toSide && { toSide: data.toSide }),
           ...(data?.label && { label: { width: data.label.width, height: data.label.height } }),
+          ...(data?.across && { across: true }),
           ...(together && { fallback: data.points.map((p) => ({ x: p.x + from.x, y: p.y + from.y })) }),
         }
       }),

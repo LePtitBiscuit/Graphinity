@@ -43,6 +43,7 @@ arrowheads, sides), connections to and from groups (`edge/edge.yml`: group → n
 (`platform/eu-west/checkout/api`, `warehouses/lyon/wms`), a universe opened by two nodes of the
 same universe (`checkout` and `checkout-canary` in `platform/clusters/eu-west.yml`) and node placement hints (`place: last`
 on the image resizer of `platform/services/catalog.yml`, `after: dbt` on the notebooks of
-`data/data.yml`).
+`data/data.yml`), and two nodes kept side by side by a connection (`align: true` on the DNS
+failover of `platform/platform.yml`).
 See the [configuration reference](https://leptitbiscuit.github.io/Graphinity/config/) for the
 file format.

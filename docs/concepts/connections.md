@@ -60,4 +60,6 @@ universe or of an unrelated one.
 Connections are routed automatically, with right angles, and avoid the nodes; labels get their
 own space. An end can choose the [side](/config/connection#ends-and-sides) of the node it attaches
 to (`from: { node: api, side: right }`). They also define the **order of the nodes along the flow**: a node is placed after
-the nodes that point to it. See [Automatic layout](/concepts/layout).
+the nodes that point to it, unless the connection keeps them
+[side by side](/config/connection#side-by-side) (`align: true`). See
+[Automatic layout](/concepts/layout).

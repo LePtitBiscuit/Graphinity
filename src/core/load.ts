@@ -452,6 +452,7 @@ function normalize(rootPath: string, loaded: Map<string, LoadedUniverse>): Archi
             ...(node.size !== undefined && { size: node.size }),
             ...(node.place !== undefined && { place: node.place }),
             ...(node.after !== undefined && { after: node.after }),
+            ...(node.beside !== undefined && { beside: node.beside }),
           },
         ]
       }),

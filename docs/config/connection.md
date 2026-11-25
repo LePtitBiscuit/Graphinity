@@ -11,6 +11,7 @@ universe, or to (or from) a node inside one of its [sub-universes](#connecting-t
 | `color`  | [color](/config/colors-and-styles#colors) | no | theme | Color of the line and of its arrowheads. |
 | `style`  | `solid` · `dashed` · `dotted` | no | `solid` | Line pattern. |
 | `arrow`  | `end` · `start` · `both` · `none` | no | `end` | Which ends carry an arrowhead: `end` points to `to`, `start` points to `from`. |
+| `align`  | `true` · `false` | no | `false` | Keeps the two nodes [side by side](#side-by-side), in the same layer, and draws the connection straight across. |
 
 ## Example
 
@@ -143,6 +144,50 @@ connections:
   [door](/concepts/sub-universes#connections-across-universes), with its name and icon.
 - A connection to a group that is not shown (a group without nodes, or without a valid name) is
   not drawn either; the group's own error is reported.
+
+## Side by side
+
+A connection orders its nodes: `to` goes one layer further along the flow than `from` (see
+[Automatic layout](/concepts/layout#order-along-the-flow)), whatever its arrowheads. With
+`align: true`, it does not: its two nodes stay **side by side** in one layer - the same row when
+the universe flows `down` or `up`, the same column when it flows `right` or `left` - and the
+connection is drawn straight across, from one tile to the other. The other connections still
+order the flow, in any direction.
+
+```yaml [architecture.yml]
+id: group
+name: Group
+direction: down                  # stacked top to bottom
+nodes:
+  - id: holding
+    name: Holding
+    icon: mdi:domain
+  - id: shop
+    name: Shop
+    icon: shopify
+  - id: crm
+    name: CRM
+    icon: hubspot
+  - id: payments
+    name: Payments
+    icon: stripe
+connections:
+  - from: holding
+    to: shop                     # below the holding
+  - from: shop
+    to: crm                      # beside the shop, on the same row
+    label: customers
+    align: true
+  - from: crm
+    to: payments                 # below the CRM
+```
+
+- Both ends must be nodes of this universe, in the same [group](/config/group) or both outside
+  any group (each group lays out its own nodes): not groups, not paths into sub-universes, not
+  the same node. Otherwise the connection is drawn without `align`, and the error says why.
+- Any connection between two nodes of one layer is drawn across, `align` or not: the same goes for
+  nodes placed [`beside`](/config/node#side-by-side) each other.
+- `side` still applies; without it, the connection takes the sides that face each other.
 
 ## Connecting to a sub-universe
 

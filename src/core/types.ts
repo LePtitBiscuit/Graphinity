@@ -69,6 +69,11 @@ export interface ArchitectureNode {
   place?: NodePlace
   /** Placement hint: further along the flow than this node of the same universe. */
   after?: string
+  /**
+   * Placement hint: in the same layer of the flow as this node of the same universe and group
+   * (the same row when the universe flows down or up, the same column when it flows right or left).
+   */
+  beside?: string
 }
 
 /** A labelled frame around some nodes of a universe (a provider, a server, a network…). */
@@ -115,6 +120,11 @@ export interface ArchitectureEdge {
   fromPath?: string[]
   /** Same for the target, inside the sub-universe of `to`. */
   toPath?: string[]
+  /**
+   * Its two nodes are kept side by side, in the same layer of the flow, and the connection is
+   * drawn across: it does not move its target further along the flow.
+   */
+  align?: true
 }
 
 /** Reading direction of a universe: where connections flow. */

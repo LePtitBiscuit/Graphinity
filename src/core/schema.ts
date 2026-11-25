@@ -29,6 +29,8 @@ export interface RawNode {
   place?: NodePlace
   /** Placement hint, unresolved: the id of another node of the universe (checked by `checkPlacement`). */
   after?: string
+  /** Placement hint, unresolved: the id of another node of the universe and group (checked by `checkPlacement`). */
+  beside?: string
 }
 
 export interface RawGroup {
@@ -58,6 +60,8 @@ export interface RawEdge {
   /** Node ids inside the sub-universe of `from` / `to` (`vps/api` → `["api"]`), resolved by the loader. */
   fromPath?: string[]
   toPath?: string[]
+  /** The two nodes stay side by side (checked by `checkAlign`). */
+  align?: true
   /** Position of the connection in the file (for the loader's errors). */
   index: number
 }
@@ -95,8 +99,8 @@ const UNIVERSE_FIELDS = ['id', 'name', 'direction', 'background', 'groups', 'nod
 export const DIRECTIONS: readonly Direction[] = ['right', 'down', 'left', 'up']
 const BACKGROUND_FIELDS = ['image', 'color', 'blur', 'grid']
 const GROUP_FIELDS = ['id', 'name', 'icon', 'color', 'border', 'blur', 'group', 'background']
-const NODE_FIELDS = ['id', 'name', 'icon', 'description', 'universe', 'group', 'tags', 'color', 'border', 'background', 'size', 'place', 'after']
-const EDGE_FIELDS = ['from', 'to', 'label', 'color', 'style', 'arrow']
+const NODE_FIELDS = ['id', 'name', 'icon', 'description', 'universe', 'group', 'tags', 'color', 'border', 'background', 'size', 'place', 'after', 'beside']
+const EDGE_FIELDS = ['from', 'to', 'label', 'color', 'style', 'arrow', 'align']
 const END_FIELDS = ['node', 'group', 'side']
 export const SIDES: readonly Side[] = ['left', 'right', 'top', 'bottom']
 export const NODE_SIZES: readonly NodeSize[] = ['small', 'medium', 'large']
@@ -218,7 +222,9 @@ export function validateUniverse(data: unknown): ValidationResult {
     // A connection to a node or group that is not shown (already reported) is not shown either.
     const visible = (id: string, group: boolean | undefined) => (group ? shownGroups.has(id) : shown.has(id))
     if (!edge || !visible(edge.from, edge.fromGroup) || !visible(edge.to, edge.toGroup)) continue
-    if (checkGroupEnds(edge, nodes, groups, ['connections', index], report)) edges.push(edge)
+    if (!checkGroupEnds(edge, nodes, groups, ['connections', index], report)) continue
+    checkAlign(edge, nodes, ['connections', index], report)
+    edges.push(edge)
   }
   checkPlacementAgainstConnections(nodes, edges, report)
 
@@ -241,6 +247,16 @@ export function validateUniverse(data: unknown): ValidationResult {
  * `b`, `b` after `a`): an invalid hint is reported and left out.
  */
 function checkPlacement(nodes: (RawNode | undefined)[], shown: ReadonlySet<string>, report: Report): void {
+  const groupOf = new Map(nodes.flatMap((node) => (node ? [[node.id, node.group] as const] : [])))
+  for (const [index, node] of nodes.entries()) {
+    const target = node?.beside
+    if (!node || target === undefined) continue
+    if (target === node.id) report(['nodes', index, 'beside'], `A node cannot be placed beside itself ("${target}")`)
+    else if (!shown.has(target)) report(['nodes', index, 'beside'], `Unknown node "${target}" (placement hints reference nodes of the same universe)`)
+    else if (groupOf.get(target) !== node.group) report(['nodes', index, 'beside'], sameGroupMessage(node.id, target, groupOf))
+    else continue
+    delete node.beside
+  }
   for (const [index, node] of nodes.entries()) {
     const target = node?.after
     if (!node || target === undefined) continue
@@ -263,6 +279,28 @@ function checkPlacement(nodes: (RawNode | undefined)[], shown: ReadonlySet<strin
       chain.push(next)
     }
   }
+}
+
+/** Nodes side by side must share their group: each group lays out its own nodes. */
+function sameGroupMessage(a: string, b: string, groupOf: ReadonlyMap<string, string | undefined>): string {
+  const where = (id: string) => (groupOf.get(id) === undefined ? 'outside any group' : `in group "${groupOf.get(id)}"`)
+  return `"${a}" (${where(a)}) and "${b}" (${where(b)}) cannot be side by side: only nodes of the same group can be aligned`
+}
+
+/**
+ * `align` keeps two nodes of the universe side by side: both ends must be nodes of the same group,
+ * not groups, paths into sub-universes or the same node. Otherwise reported, and the connection is
+ * drawn without it.
+ */
+function checkAlign(edge: RawEdge, nodes: readonly (RawNode | undefined)[], path: FieldPath, report: Report): void {
+  if (!edge.align) return
+  const groupOf = new Map(nodes.flatMap((node) => (node ? [[node.id, node.group] as const] : [])))
+  if (edge.fromGroup || edge.toGroup || edge.fromPath || edge.toPath)
+    report([...path, 'align'], '"align" keeps two nodes side by side: its ends must be nodes of this universe, not groups or paths into sub-universes')
+  else if (edge.from === edge.to) report([...path, 'align'], `A connection from a node to itself cannot be aligned ("${edge.from}")`)
+  else if (groupOf.get(edge.from) !== groupOf.get(edge.to)) report([...path, 'align'], sameGroupMessage(edge.from, edge.to, groupOf))
+  else return
+  delete edge.align
 }
 
 /**
@@ -609,10 +647,17 @@ function readNode(
   const size = readChoice(item, 'size', NODE_SIZES, path, report)
   const place = readChoice(item, 'place', NODE_PLACES, path, report)
   let after = readText(item, 'after', path, MAX_ID_LENGTH, false, report)
-  // One placement hint per node: "place" puts it at an end of the flow, "after" relative to a node.
-  if (place != null && after !== undefined) {
-    report([...path, 'after'], `A node takes one placement hint: "place" is already set (use either place or after)`)
+  let beside = readText(item, 'beside', path, MAX_ID_LENGTH, false, report)
+  // One placement hint per node: "place" puts it at an end of the flow, "after" and "beside"
+  // relative to a node. The first one set is kept.
+  const hint = place != null ? 'place' : after !== undefined ? 'after' : undefined
+  if (hint && after !== undefined && hint !== 'after') {
+    report([...path, 'after'], `A node takes one placement hint: "${hint}" is already set (use one of place, after, beside)`)
     after = undefined
+  }
+  if (hint && beside !== undefined) {
+    report([...path, 'beside'], `A node takes one placement hint: "${hint}" is already set (use one of place, after, beside)`)
+    beside = undefined
   }
   // A node needs an id and a name to be shown; any other invalid property is left out.
   if (id === undefined || name === undefined) return { ...(id !== undefined && { id }) }
@@ -632,6 +677,7 @@ function readNode(
       ...(size != null && { size }),
       ...(place != null && { place }),
       ...(after !== undefined && { after }),
+      ...(beside !== undefined && { beside }),
     },
   }
 }
@@ -660,6 +706,11 @@ function readEdge(
   const color = readColor(item, 'color', path, report)
   const style = readChoice(item, 'style', LINE_STYLES, path, report)
   const arrow = readChoice(item, 'arrow', ARROW_HEADS, path, report)
+  let align: boolean | undefined
+  if (Object.hasOwn(item, 'align') && item['align'] !== null) {
+    if (typeof item['align'] === 'boolean') align = item['align']
+    else report([...path, 'align'], `"align" must be true or false, got ${JSON.stringify(item['align'])}`)
+  }
   // A connection is shown only if everything that draws it is valid; an invalid label is left out.
   // An invalid side falls back to the default side.
   if (from === undefined || to === undefined || color === null || style === null || arrow === null) return undefined
@@ -670,6 +721,7 @@ function readEdge(
     ...(color !== undefined && { color }),
     ...(style !== undefined && { style }),
     ...(arrow !== undefined && { arrow }),
+    ...(align && { align: true as const }),
     ...(from.side && { fromSide: from.side }),
     ...(to.side && { toSide: to.side }),
     ...(from.group && { fromGroup: true as const }),

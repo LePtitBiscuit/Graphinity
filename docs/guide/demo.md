@@ -55,7 +55,9 @@ kestrel/                        ← project directory (the root file's directory
 - `edge/edge.yml` - DNS, CDN, WAF, API gateway and load balancers, in groups inside a
   *Cloudflare* group; a connection leaves the bottom of that group for Logpush
   ([group → node](/config/connection#connecting-groups)).
-- `platform/platform.yml` - drawn top to bottom: the two regions and the shared services.
+- `platform/platform.yml` - drawn top to bottom: the two regions and the shared services. The
+  *DNS failover* connection keeps the standby region beside the primary one, on the same row
+  (`align: true`).
   `platform/clusters/eu-west.yml` nests groups on the maximum of 4 levels (cluster ›
   applications › commerce namespace › checkout node pool); `us-east.yml` is the standby copy.
 - `platform/services/checkout.yml` - one universe opened from both clusters, and twice in

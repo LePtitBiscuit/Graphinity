@@ -70,3 +70,10 @@ connections:
   - from: eu-west/checkout/db/backup
     to: object-storage
     label: WAL archive
+  # Side by side (align): the standby stays next to the primary region, on the same row.
+  - from: eu-west
+    to: us-east
+    label: DNS failover
+    style: dashed
+    color: orange
+    align: true

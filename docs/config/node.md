@@ -17,6 +17,7 @@ An item of `nodes`.
 | `size`        | `small` · `medium` · `large` | no | `medium` | Size of the tile: 40, 56 or 80 px (icons of 22, 30 or 44 px). The box around it is 120, 144 or 176 px wide. |
 | `place`       | `first` · `last` | no | | [Placement hint](#placement-hints): the node goes in the first or the last layer of the flow. |
 | `after`       | id | no | | [Placement hint](#placement-hints): the node goes further along the flow than this node of the same universe. |
+| `beside`      | id | no | | [Placement hint](#side-by-side): the node goes in the same layer as this node of the same universe and group (the same row when the flow goes down or up, the same column when it goes right or left). |
 
 ## Example
 
@@ -52,7 +53,7 @@ nodes:
 
 ## Placement hints
 
-Positions are always [computed](/concepts/layout): there are no coordinates. Two optional hints
+Positions are always [computed](/concepts/layout): there are no coordinates. Three optional hints
 steer where a node goes along the flow of its universe (its [direction](/concepts/layout#direction)):
 
 - **`place: first`** or **`place: last`** - the node goes in the first or the last layer of the
@@ -61,9 +62,11 @@ steer where a node goes along the flow of its universe (its [direction](/concept
 - **`after: <node id>`** - the node goes further along the flow than that node of the same
   universe, as if a connection went from it to this node. That connection is invisible: it is
   only used by the layout, nothing is drawn and it is not listed in the details panel.
+- **`beside: <node id>`** - the node goes in the same layer as that node, next to it (see
+  [Side by side](#side-by-side)).
 
-A node takes **one** hint at most: `place` or `after`. Inside a layer, nodes still follow the
-order of the file. There is no hint to put a node beside another one (in the same column or row).
+A node takes **one** hint at most: `place`, `after` or `beside`. Inside a layer, nodes still
+follow the order of the file.
 
 `place` wins over the connections: a connection into a `first` node (or out of a `last` one) is
 drawn against the flow. `after` cannot contradict them: `a` after `c` while connections lead from
@@ -97,14 +100,59 @@ connections:
     to: db
 ```
 
+## Side by side
+
+`beside: <node id>` keeps a node in the **same layer** as another node of the universe: the same
+row when the universe flows `down` or `up`, the same column when it flows `right` or `left`. The
+other nodes still follow the connections, in any direction. A connection between two nodes of one
+layer does not move them: it is drawn straight across, from one tile to the other. To keep the two
+ends of a connection side by side, set [`align: true`](/config/connection#side-by-side) on the
+connection instead.
+
+```yaml [architecture.yml]
+id: crm
+name: CRM
+direction: down
+nodes:
+  - id: web
+    name: Website
+    icon: vuedotjs
+  - id: crm
+    name: CRM
+    icon: hubspot
+  - id: billing
+    name: Billing
+    icon: stripe
+    beside: crm       # in the row of the CRM, not below it
+  - id: warehouse
+    name: Data warehouse
+    icon: snowflake
+connections:
+  - from: web
+    to: crm
+  - from: crm
+    to: billing       # drawn across the row
+    label: invoices
+  - from: billing
+    to: warehouse
+```
+
+- Both nodes must be in the same [group](/config/group), or both outside any group: each group
+  lays out its own nodes.
+- Several nodes can share a layer (`b` beside `a`, `c` beside `b`); the order inside the layer
+  still follows the file and the connections.
+- `place` wins: a node `beside` a `first` node is in the first layer too.
+
 An invalid hint is an error and is left out (the node keeps its computed place):
 
 | Hint | Message |
 | ---- | ------- |
 | `place: middle` | `"place" must be one of first, last, got "middle"` |
-| `place` and `after` on the same node | `A node takes one placement hint: "place" is already set (use either place or after)` (`after` is left out) |
+| `place` and `after` on the same node | `A node takes one placement hint: "place" is already set (use one of place, after, beside)` (`after` is left out; same with `beside`) |
 | `after: nope`, no such node in the universe | `Unknown node "nope" (placement hints reference nodes of the same universe)` |
 | `after: c` on the node `c` | `A node cannot be placed after itself ("c")` |
+| `beside: c` on the node `c` | `A node cannot be placed beside itself ("c")` |
+| `beside: a` on a node of another group | `"d" (in group "g") and "a" (outside any group) cannot be side by side: only nodes of the same group can be aligned` |
 | `a` after `c`, `c` after `b`, `b` after `a` | `Placement hints form a loop (a → c → b → a)` - reported once, on the first node of the loop in the file, whose hint is left out |
 | `a` after `c`, with connections `a → b → c` | `"a" cannot be placed after "c": the connections lead from it to "c" (a → b → c)` |
 

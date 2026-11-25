@@ -24,7 +24,8 @@ over the diagram:
 | a node's `description`, a tag, `color`, `border`, `background` or `size` | that element (default border, fill and size) |
 | a node's `universe` (missing file, syntax error, circular reference…) | the link - the node does not open a universe |
 | a node's `group` (unknown group) | its membership - the node is shown outside any frame |
-| a node's `place` or `after` (unknown value or node, the node itself, a loop, both set) | that hint - the node keeps its computed place (with both set, `after` is left out) |
+| a node's `place`, `after` or `beside` (unknown value or node, the node itself, a loop, another group, several set) | that hint - the node keeps its computed place (with several set, the first of `place`, `after`, `beside` is kept) |
+| a connection's `align` (not a boolean; a group, a path, the same node or another group at an end) | `align` - the connection is drawn, and orders its nodes as usual |
 | a node's `id` or `name` | the node, and its connections |
 | a connection (`from`, `to`, `color`, `style`, `arrow`) | the connection |
 | a connection's path into a sub-universe (`checkout/apii`, or that universe is broken) | the connection |
@@ -77,9 +78,11 @@ code `1`), and `build` writes nothing - an invalid configuration is never publis
 - `group` references a group declared in the universe; every group has at least one node,
   directly or in a group inside it; groups nest as a tree of at most 4 levels.
 - At most 4 tags per node, one per corner.
-- [Placement hints](/config/node#placement-hints): at most one per node (`place` or `after`);
-  `after` names another node of the same universe, and hints do not form a loop
-  (`a` after `b`, `b` after `a`).
+- [Placement hints](/config/node#placement-hints): at most one per node (`place`, `after` or
+  `beside`); `after` names another node of the same universe, and hints do not form a loop
+  (`a` after `b`, `b` after `a`); `beside` names another node of the same universe and group.
+- A connection with [`align`](/config/connection#side-by-side) links two nodes of the universe, in
+  the same group: not a group, a path into a sub-universe or the node itself.
 
 **Files**
 

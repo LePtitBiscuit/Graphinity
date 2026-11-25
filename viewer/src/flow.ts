@@ -16,7 +16,7 @@ export type GroupFlowNode = Node<{ group: ArchitectureGroup; logo?: ViewerIcon }
 export type PortalFlowNode = Node<{ node: ArchitectureNode; portal: Portal; logo?: ViewerIcon; direction: Direction }, 'portal'>
 export type FlowNode = ServiceFlowNode | GroupFlowNode | PortalFlowNode
 export type RoutedFlowEdge = Edge<
-  Pick<LaidOutEdge, 'points' | 'label'> &
+  Pick<LaidOutEdge, 'points' | 'label' | 'across'> &
     Pick<LaidOutEdge['edge'], 'color' | 'style' | 'fromSide' | 'toSide'> & {
     /** Laid-out positions of the source and target nodes (or groups), to tell when they have been moved. */
     sourceOrigin: XYPosition
@@ -142,6 +142,7 @@ export function toFlow(
           ...(style && { style }),
           ...(fromSide && { fromSide }),
           ...(toSide && { toSide }),
+          ...(edge.across && { across: true }),
         },
         ...((heads === 'end' || heads === 'both') && { markerEnd: arrow(color) }),
         ...((heads === 'start' || heads === 'both') && { markerStart: arrow(color) }),

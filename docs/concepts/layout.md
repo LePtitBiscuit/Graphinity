@@ -40,7 +40,10 @@ connections:
 - When connections form a **loop** (`nginx → api` and `api → nginx`), only the connection that
   closes the loop is drawn against the flow, so nodes keep their place. A loop without any entry
   starts at the node listed first in the file.
-- For an exchange in both directions, prefer one connection with `arrow: both`.
+- For an exchange in both directions, prefer one connection with `arrow: both`. Arrowheads do
+  not change the order: `to` is placed further than `from` whatever they point to.
+- A connection with [`align: true`](/config/connection#side-by-side) does not order its nodes: they
+  stay side by side in one layer, and the connection goes straight across.
 - Between otherwise equivalent placements, the **order of the file** decides: list nodes in the
   order you want to read them.
 
@@ -55,6 +58,7 @@ The layout places nodes in **layers** along the flow: columns when the direction
 | `place: first` | The node goes in the first layer of the flow (the first column of a `right` universe). |
 | `place: last` | The node goes in the last layer of the flow. |
 | `after: <node id>` | The node goes further along the flow than that node of the same universe: an invisible connection from that node is added for the layout only (nothing is drawn). |
+| `beside: <node id>` | The node goes in the same layer as that node of the same universe and group: the same row in a `down` universe, the same column in a `right` one. A connection between them is drawn straight across. |
 
 ```yaml [architecture.yml]
 id: pipeline
@@ -81,9 +85,19 @@ connections:
     to: archive
 ```
 
-Hints only choose the layer. Positions stay computed: there are no coordinates, the order inside
-a layer still follows the file, and there is no hint to put a node in the same column or row as
-another one.
+Hints only choose the layer. Positions stay computed: there are no coordinates, and the order
+inside a layer still follows the file and the connections.
+
+### Side by side
+
+When nodes share a layer (`beside`, or a connection with `align: true`), the layers of that
+universe are computed by Graphinity, then given to ELK, which keeps them: ELK alone always puts
+the target of a connection one layer further. They follow the same rules (connections from the
+nodes without incoming connections, a loop closed against the flow, `place` first), and a node
+without incoming connections comes just before the first node it leads to. Each group lays out its
+own nodes, so only nodes of the same group can share a layer. The gaps of that universe make room
+for the labels: between the layers for the connections along the flow, inside a layer for the
+connections across it.
 
 ## Connections
 
