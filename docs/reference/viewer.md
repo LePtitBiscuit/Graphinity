@@ -16,7 +16,9 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
   behind them.
 - **Connections** with right angles, arrowheads and labels, in their configured color and style.
   Connections that share a side of a node attach at their own points, spread along that side of
-  the tile. A connection to a group attaches to the group's frame.
+  the tile. A connection to a group attaches to the group's frame. A connection between two
+  nodes of one layer ([`align`](/config/connection#side-by-side),
+  [`beside`](/config/node#side-by-side)) goes straight across, from one tile to the other.
 - **Controls** at the bottom left: zoom in, zoom out, fit the universe to the screen, show or
   hide the grid.
 - **A search field** at the top right, to find a node or a group in any universe

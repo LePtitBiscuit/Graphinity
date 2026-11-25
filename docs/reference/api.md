@@ -235,6 +235,10 @@ interface ArchitectureNode {
   border?: BorderStyle // 'solid' | 'dashed' | 'dotted' | 'none'
   background?: Color
   size?: NodeSize // 'small' | 'medium' | 'large'
+  /** Placement hints (one at most): an end of the flow, after a node, or in the layer of a node. */
+  place?: NodePlace // 'first' | 'last'
+  after?: string
+  beside?: string
 }
 
 interface ArchitectureGroup {
@@ -267,6 +271,11 @@ interface ArchitectureEdge {
   /** End inside the sub-universe of from / to ("checkout/api" → to: "checkout", toPath: ["api"]). */
   fromPath?: string[]
   toPath?: string[]
+  /** The last id of fromPath / toPath is a group of the universe it reaches, not a node. */
+  fromPathGroup?: true
+  toPathGroup?: true
+  /** The two nodes stay side by side, in one layer ("align: true"). */
+  align?: true
 }
 
 type IconRef =

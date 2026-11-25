@@ -78,6 +78,21 @@ also be a [group](/config/connection#a-group-of-a-sub-universe) of that universe
 sub-universe has its own errors (missing file, syntax error…), its nodes cannot be reached either:
 `The universe of "routing" is not available ("routing/api")`.
 
+## Nodes side by side
+
+```
+architecture.yml:24:13 connections[3].align: "a" (outside any group) and "b" (in group "g") cannot be side by side: only nodes of the same group can be aligned
+architecture.yml:12:13 nodes[4].beside: A node takes one placement hint: "after" is already set (use one of place, after, beside)
+```
+
+[`align: true`](/config/connection#side-by-side) links two different nodes of this universe, in
+the same group (or both outside any group): not a group, not a path into a sub-universe. A node
+placed [`beside`](/config/node#side-by-side) another one follows the same rule, and takes only
+one placement hint. The connection is still drawn (without `align`), the node keeps its computed
+place. Other messages: `"align" keeps two nodes side by side: its ends must be nodes of this
+universe, not groups or paths into sub-universes`, `A connection from a node to itself cannot be
+aligned ("a")`, `A node cannot be placed beside itself ("c")`.
+
 ## Groups inside groups
 
 ```
