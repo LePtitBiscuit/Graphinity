@@ -51,7 +51,9 @@ kestrel/                        ← project directory (the root file's directory
   merchants, couriers), Kestrel's own systems (edge, platform, data, warehouses, software
   delivery: each opens its own universe) and third-party services (Stripe, Sentry, PagerDuty,
   Slack). Its connections reach deep into the sub-universes by path
-  (`platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`).
+  (`platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`), and one ends on a
+  group of a sub-universe: Terraform provisions the *Regions* group of the platform
+  (`delivery/terraform` → `platform/regions`).
 - `edge/edge.yml` - DNS, CDN, WAF, API gateway and load balancers, in groups inside a
   *Cloudflare* group; a connection leaves the bottom of that group for Logpush
   ([group → node](/config/connection#connecting-groups)).

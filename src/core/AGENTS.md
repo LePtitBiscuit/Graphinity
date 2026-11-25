@@ -85,8 +85,12 @@ a collection that is not on Iconify, or to bundle one (offline).
 An end may be a group of the universe: a plain id names the node with that id, or the group when
 no node has it; `{ group }` always names the group (`schema.ts` `readEnd`, `KnownEnds`). The raw
 and normalized edges carry `fromGroup`/`toGroup`; `from`/`to` are then group ids. `checkGroupEnds`
-rejects a group linked to itself or to a node or group inside it; a path cannot start at a group
-and always ends on a node. Empty groups are dropped before the connections are read, so a
+rejects a group linked to itself or to a node or group inside it; a path cannot start at (or go
+through) a group, but its last id may name a group of the universe it reaches
+(`integrations/business`): `readEnd` records what the end requires (`fromPathEnd`/`toPathEnd`:
+`node` for `{ node }`, `group` for `{ group: a/b }`, absent for a plain path: a node, else a
+group), and `load.ts` `reach` sets `fromPathGroup`/`toPathGroup` when it is a group (the raw
+`*PathEnd` fields are not normalized). Empty groups are dropped before the connections are read, so a
 connection to a group that is not shown is left out without another error.
 
 ## Connections into sub-universes

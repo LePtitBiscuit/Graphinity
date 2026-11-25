@@ -89,6 +89,36 @@ test('draws a connection to a group up to its frame', async ({ page }) => {
   expect(onVertical || onHorizontal, JSON.stringify({ end, frame })).toBe(true)
 })
 
+test('keeps aligned nodes side by side, and draws a path ending on a group to its frame', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${port}/#/cluster`)
+  const box = async (id: string) => (await page.locator(`.vue-flow__node[data-id="${id}"]`).boundingBox())!
+  /** The screen points of the ends of a connection. */
+  const ends = (id: string) =>
+    page.locator(`.vue-flow__edge[data-id="${id}"] path.vue-flow__edge-path`).evaluate((el) => {
+      const svg = el as unknown as { getTotalLength(): number; getPointAtLength(n: number): { x: number; y: number }; getScreenCTM(): { a: number; d: number; e: number; f: number } }
+      const m = svg.getScreenCTM()
+      const at = (n: number) => {
+        const p = svg.getPointAtLength(n)
+        return { x: p.x * m.a + m.e, y: p.y * m.d + m.f }
+      }
+      return [at(0), at(svg.getTotalLength())]
+    })
+  await expect(page.locator('.vue-flow__edge-textwrapper, .vue-flow__edge-text').filter({ hasText: 'warm' }).first()).toBeVisible()
+  // The universe flows right: worker and cache share a column, the connection goes straight down.
+  const [worker, cache] = [await box('worker'), await box('cache')]
+  expect(Math.abs(worker.x - cache.x)).toBeLessThan(1)
+  const [start, end] = await ends('e0')
+  expect(Math.abs(start!.x - end!.x)).toBeLessThan(1)
+  // `team → cluster/pool`, declared at the root: here, from the door to the frame of the group.
+  await expect(page.locator('.vue-flow__edge-textwrapper, .vue-flow__edge-text').filter({ hasText: 'jobs' }).first()).toBeVisible()
+  const frame = (await page.locator('.vue-flow__node[data-id="group:pool"] .group').boundingBox())!
+  const [, last] = await ends('ctx:0:e3')
+  const near = (a: number, b: number) => Math.abs(a - b) < 2
+  const onVertical = (near(last!.x, frame.x) || near(last!.x, frame.x + frame.width)) && last!.y > frame.y && last!.y < frame.y + frame.height
+  const onHorizontal = (near(last!.y, frame.y) || near(last!.y, frame.y + frame.height)) && last!.x > frame.x && last!.x < frame.x + frame.width
+  expect(onVertical || onHorizontal, JSON.stringify({ last, frame })).toBe(true)
+})
+
 test('shows or hides the grid with the controls button', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${port}/`)
   const grid = page.locator('.vue-flow__background')

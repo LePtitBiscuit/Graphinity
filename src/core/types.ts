@@ -121,6 +121,13 @@ export interface ArchitectureEdge {
   /** Same for the target, inside the sub-universe of `to`. */
   toPath?: string[]
   /**
+   * The last id of `fromPath` is a group of the universe it reaches, not a node: there, the
+   * connection attaches to the frame of that group.
+   */
+  fromPathGroup?: true
+  /** Same for `toPath`. */
+  toPathGroup?: true
+  /**
    * Its two nodes are kept side by side, in the same layer of the flow, and the connection is
    * drawn across: it does not move its target further along the flow.
    */

@@ -151,3 +151,9 @@ connections:
     to: { node: slack, side: top }
     label: on-call
     arrow: both
+  # A path that ends on a group of a sub-universe: Terraform provisions both regions at once.
+  - from: delivery/terraform
+    to: platform/regions
+    label: provisions
+    style: dashed
+    color: purple

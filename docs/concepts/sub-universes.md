@@ -56,7 +56,9 @@ A sub-universe shows how it is connected to the universes above it:
 - **Connections into the sub-universe.** In the parent file, an end of a connection can name a
   node *inside* the universe of a node, with a path: `cluster/app` is the node `app` of the
   universe opened by `cluster`. The parent draws it on the `cluster` node; the sub-universe
-  draws it from (or to) the door, on `app` itself.
+  draws it from (or to) the door, on `app` itself. The path can also end on a group of that
+  universe (`cluster/workers`): the sub-universe draws the connection to the frame of the group
+  (see [A group of a sub-universe](/config/connection#a-group-of-a-sub-universe)).
 
 ::: code-group
 

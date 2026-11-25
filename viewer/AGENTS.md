@@ -63,7 +63,9 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
   whose tile is the whole frame (`tileTop`, `tileHeight`), an end but never an obstacle nor a
   label obstacle. `GroupNode.vue` has invisible handles (Vue Flow needs them to draw edges).
   `context.ts` shows an ancestor's group as a door (`portal:<level>:group:<id>`, `Portal.group`);
-  `connectionsOf` lists a group end with `group: true`.
+  a path ending on a group (`toPathGroup`) is drawn on the node that leads to it, and in the
+  universe that holds the group on its frame (`classify(..., group)`: the context edge gets
+  `toGroup`); `connectionsOf` lists a group end with `group: true`.
 - **Connection anchors**: a single connection on a side of a node attaches in the middle of the
   tile side; when a side carries several connections, each end gets its own ELK port, spread
   evenly along the tile (second ELK pass, `spreadPorts()`, `portPosition()`, `DEFAULT_SIDES` in

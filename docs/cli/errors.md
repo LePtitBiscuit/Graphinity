@@ -69,11 +69,12 @@ connections:        # was: edges
 
 ```
 architecture.yml:104:9 connections[0].to: Node "stripe" does not open a universe ("stripe/x")
-architecture.yml:120:11 connections[5].from: Unknown node "apii" in universe "checkout" ("platform/eu-west/checkout/apii")
+architecture.yml:120:11 connections[5].from: Unknown node or group "apii" in universe "checkout" ("platform/eu-west/checkout/apii")
 ```
 
 A [path](/config/connection#connecting-to-a-sub-universe) `node/inner` must start with a node
-that opens a universe, and every next id must be a node of the universe reached. When a
+that opens a universe, and every next id must be a node of the universe reached; the last one may
+also be a [group](/config/connection#a-group-of-a-sub-universe) of that universe. When a
 sub-universe has its own errors (missing file, syntax error…), its nodes cannot be reached either:
 `The universe of "routing" is not available ("routing/api")`.
 

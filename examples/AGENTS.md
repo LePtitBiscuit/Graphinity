@@ -11,7 +11,7 @@ levels, linked by `universe` fields:
 
 | File | Universe | Links |
 | ---- | -------- | ----- |
-| `architecture.yml` | `kestrel` (root, left to right, custom background; paths deep into the sub-universes: `edge/cdn`, `platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`, `platform/observability/alertmanager`) | `edge`, `platform`, `data`, `warehouses`, `delivery` → their folder's file |
+| `architecture.yml` | `kestrel` (root, left to right, custom background; paths deep into the sub-universes: `edge/cdn`, `platform/eu-west/checkout/api`, `data/kafka/orders`, `warehouses/lyon/wms`, `platform/observability/alertmanager`; one ends on a group: `platform/regions`) | `edge`, `platform`, `data`, `warehouses`, `delivery` → their folder's file |
 | `edge/edge.yml` | `edge` (groups inside a `cloudflare` group; a connection from that group, `side: bottom`, to `logpush`) | none (leaf) |
 | `platform/platform.yml` | `platform` (top to bottom; paths two levels down: `eu-west/checkout/db/primary`, `eu-west/checkout/db/backup`; `eu-west → us-east` with `align: true`) | `eu-west`, `us-east` → `clusters/*.yml`; `observability` → `observability.yml` |
 | `platform/clusters/eu-west.yml` | `eu-west` (grid, groups nested on the maximum of 4 levels) | `catalog`, `checkout`, `routing` → `../services/*.yml` |

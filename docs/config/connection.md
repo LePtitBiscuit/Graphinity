@@ -56,7 +56,7 @@ mapping:
 | Property | Type | Required | Description |
 | -------- | ---- | -------- | ----------- |
 | `node`   | node id or [path](#connecting-to-a-sub-universe) | `node` or `group` | The node. |
-| `group`  | group id | `node` or `group` | The [group](#connecting-groups) (instead of a node). |
+| `group`  | group id or [path](#a-group-of-a-sub-universe) | `node` or `group` | The [group](#connecting-groups) (instead of a node), or a group of a sub-universe (`integrations/business`). |
 | `side`   | `left` · `right` · `top` · `bottom` | no | Side of the node or group where the connection attaches. Default: the side of the flow. |
 
 ```yaml [architecture.yml]
@@ -139,8 +139,8 @@ connections:
   (`A group cannot be connected to itself ("cloudflare")`), nor to a node or a group inside it
   (`Group "cloudflare" holds node "cdn": a connection cannot link a group to what is inside it`).
 - A path cannot go through a group (`Group "cloudflare" does not open a universe ("cloudflare/cdn")`),
-  and a path into a sub-universe ends on a node, not on a group of that universe. The other end of
-  a connection to a group may be a path: in the sub-universe, the group appears as a
+  but it can end on one: see [A group of a sub-universe](#a-group-of-a-sub-universe). The other end
+  of a connection to a group may be a path: in the sub-universe, the group appears as a
   [door](/concepts/sub-universes#connections-across-universes), with its name and icon.
 - A connection to a group that is not shown (a group without nodes, or without a valid name) is
   not drawn either; the group's own error is reported.
@@ -208,11 +208,66 @@ draws it on the end itself, with a door for the other end. See
 [Connections across universes](/concepts/sub-universes#connections-across-universes).
 
 - The first node must open a universe (`Node "stripe" does not open a universe ("stripe/x")`), and each
-  following id must be a node of the universe reached
-  (`Unknown node "apii" in universe "checkout" ("checkout/apii")`). Otherwise the connection is not
-  drawn.
+  following id must be a node of the universe reached; the last one may also be a group
+  (`Unknown node or group "apii" in universe "checkout" ("checkout/apii")`). Otherwise the
+  connection is not drawn.
 - A connection from a node to the inside of its own universe (`checkout → checkout/api`) is only drawn
   inside.
+
+### A group of a sub-universe
+
+The last id of a path can name a **group** of the universe it reaches: a node of this universe is
+then connected to a whole group of a lower level, in one connection, rather than one connection per
+node of the group. Like a plain id, it names the node with that id, or the group when no node has
+it; write `{ group: <path> }` to name the group whatever the nodes are called.
+
+```yaml [architecture.yml]
+id: company
+name: Company
+nodes:
+  - id: agn360
+    name: AGN360
+    icon: mdi:car
+  - id: integrations
+    name: Business integrations
+    icon: mdi:puzzle
+    universe: ./integrations.yml
+connections:
+  - from: agn360
+    to: integrations/business        # the group "business" of integrations.yml
+    label: orders
+  - from: { group: integrations/business, side: bottom }
+    to: agn360
+    label: status
+```
+
+```yaml [integrations.yml]
+id: integrations
+name: Business integrations
+groups:
+  - id: business
+    name: Business services
+nodes:
+  - id: crm
+    name: CRM
+    icon: hubspot
+    group: business
+  - id: erp
+    name: ERP
+    icon: sap
+    group: business
+  - id: mail
+    name: Mail
+    icon: gmail
+```
+
+- Here, the connection is drawn on the node that opens the universe (`integrations`), as for a
+  node path. Inside `integrations.yml`, it attaches to the frame of the group, with a door for
+  AGN360. On the levels in between, it goes to the node that leads to the group.
+- `side` applies to the frame of the group, inside the sub-universe.
+- The group must be shown there (a group without nodes is not):
+  `Unknown node or group "nope" in universe "integrations" ("integrations/nope")`; with
+  `{ group }`: `Unknown group "nope" …`, with `{ node }`: `Unknown node "business" …`.
 
 ## Rules
 

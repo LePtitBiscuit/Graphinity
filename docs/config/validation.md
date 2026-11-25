@@ -72,7 +72,8 @@ code `1`), and `build` writes nothing - an invalid configuration is never publis
 - Ids are valid; universe ids are unique in the project; node and group ids are unique in their
   universe.
 - Connections reference nodes or groups of the same universe, or - with a path (`checkout/api`) -
-  nodes of the universes they open, up to 8 levels down. A group end is not linked to itself nor
+  nodes of the universes they open, up to 8 levels down (the last id may name a group there). A
+  group end is not linked to itself nor
   to a node or group inside it, and a path does not go through a group
   ([Connecting groups](/config/connection#connecting-groups)).
 - `group` references a group declared in the universe; every group has at least one node,

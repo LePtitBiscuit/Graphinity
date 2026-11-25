@@ -59,13 +59,29 @@ await writeFile(
     '  - { from: repo, to: cluster/worker, label: deploy }',
     // A connection to a group (its frame).
     '  - { from: badge, to: data, label: sync }',
+    // A path that ends on a group of a sub-universe.
+    '  - { from: team, to: cluster/pool, label: jobs }',
     '',
   ].join('\n'),
 )
 
 await writeFile(
   path.join(projectDir, 'cluster.yml'),
-  ['id: cluster', 'name: Cluster', 'background: { grid: "#ff000080" }', 'nodes:', '  - { id: worker, name: Worker, icon: tabler:server }', ''].join('\n'),
+  [
+    'id: cluster',
+    'name: Cluster',
+    'background: { grid: "#ff000080" }',
+    'groups:',
+    '  - { id: pool, name: Pool }',
+    'nodes:',
+    '  - { id: worker, name: Worker, icon: tabler:server }',
+    '  - { id: cache, name: Cache, icon: mdi:database }',
+    '  - { id: queue, name: Queue, icon: mdi:database, group: pool }',
+    'connections:',
+    // Side by side: the cache stays in the column of the worker.
+    '  - { from: worker, to: cache, label: warm, align: true }',
+    '',
+  ].join('\n'),
 )
 
 const { buildSite } = await import('../src/cli/build.ts')

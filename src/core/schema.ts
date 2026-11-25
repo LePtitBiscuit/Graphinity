@@ -60,6 +60,15 @@ export interface RawEdge {
   /** Node ids inside the sub-universe of `from` / `to` (`vps/api` → `["api"]`), resolved by the loader. */
   fromPath?: string[]
   toPath?: string[]
+  /**
+   * What the last id of the path must be: `node` (`{ node: a/b }`) or `group` (`{ group: a/b }`).
+   * Absent: a node, or a group of that universe when no node has the id (resolved by the loader).
+   */
+  fromPathEnd?: 'node' | 'group'
+  toPathEnd?: 'node' | 'group'
+  /** The last id of the path is a group (set by the loader). */
+  fromPathGroup?: true
+  toPathGroup?: true
   /** The two nodes stay side by side (checked by `checkAlign`). */
   align?: true
   /** Position of the connection in the file (for the loader's errors). */
@@ -728,6 +737,8 @@ function readEdge(
     ...(to.group && { toGroup: true as const }),
     ...(from.path && { fromPath: from.path }),
     ...(to.path && { toPath: to.path }),
+    ...(from.end && { fromPathEnd: from.end }),
+    ...(to.end && { toPathEnd: to.end }),
     index: Number(path[path.length - 1]),
   }
 }
@@ -745,11 +756,13 @@ function readEnd(
   path: FieldPath,
   known: KnownEnds,
   report: Report,
-): { node: string; group?: true; side?: Side; path?: string[] } | undefined {
+): { node: string; group?: true; side?: Side; path?: string[]; end?: 'node' | 'group' } | undefined {
   const value = record[key]
   let node: string | undefined
   let side: Side | undefined
   let nodePath: FieldPath = [...path, key]
+  /** What the last id of a path must be, when the end says it. */
+  let end: 'node' | 'group' | undefined
   if (isRecord(value)) {
     const at = [...path, key]
     checkFields(value, END_FIELDS, at, report)
@@ -762,18 +775,24 @@ function readEnd(
       }
       const group = readText(value, 'group', at, MAX_ID_LENGTH, true, report)
       if (group === undefined) return undefined
-      if (!known.groups.has(group)) {
+      if (group.includes('/')) {
+        // A group of a sub-universe (`integrations/business`): a path, read below, ending on a group.
+        node = group
+        nodePath = [...at, 'group']
+        end = 'group'
+      } else if (!known.groups.has(group)) {
         report([...at, 'group'], `Unknown group "${group}" (connections must reference groups of the same universe)`)
         return undefined
+      } else return { node: group, group: true, ...(side && { side }) }
+    } else {
+      if (!named('node')) {
+        report([...at, 'node'], 'Missing required field "node" (or "group")')
+        return undefined
       }
-      return { node: group, group: true, ...(side && { side }) }
+      node = readText(value, 'node', at, MAX_ID_LENGTH, true, report)
+      nodePath = [...at, 'node']
+      end = 'node'
     }
-    if (!named('node')) {
-      report([...at, 'node'], 'Missing required field "node" (or "group")')
-      return undefined
-    }
-    node = readText(value, 'node', at, MAX_ID_LENGTH, true, report)
-    nodePath = [...at, 'node']
   } else {
     node = readText(record, key, path, MAX_ID_LENGTH, true, report)
   }
@@ -811,7 +830,7 @@ function readEnd(
     report(nodePath, `Node "${first}" does not open a universe ("${node}")`)
     return undefined
   }
-  return { node: first, ...(side && { side }), ...(inner.length > 0 && { path: inner }) }
+  return { node: first, ...(side && { side }), ...(inner.length > 0 && { path: inner, ...(end && { end }) }) }
 }
 
 function readId(

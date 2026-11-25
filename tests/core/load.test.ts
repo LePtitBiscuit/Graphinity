@@ -585,7 +585,7 @@ describe('loadArchitecture - connections into sub-universes', () => {
     const result = await loadArchitecture(path.join(dir, 'root.yml'))
     expect(result.errors.map((e) => [e.field, e.message])).toEqual([
       ['nodes[2].universe', expect.stringMatching(/^File not found/)],
-      ['connections[0].to', 'Unknown node "apii" in universe "vps" ("org/vps/apii")'],
+      ['connections[0].to', 'Unknown node or group "apii" in universe "vps" ("org/vps/apii")'],
       ['connections[1].to', 'The universe of "gone" is not available ("gone/x")'],
     ])
     expect(result.architecture?.universes['root']!.edges).toEqual([{ id: 'e0', from: 'ci', to: 'org', toPath: ['vps'] }])
@@ -612,6 +612,58 @@ connections:
     expect(result.architecture.universes['root']!.edges).toEqual([
       { id: 'e0', from: 'office', to: 'org', fromGroup: true },
       { id: 'e1', from: 'office', to: 'org', toPath: ['api'], label: 'deploy', fromSide: 'bottom', fromGroup: true },
+    ])
+  })
+})
+
+describe('loadArchitecture - connections to groups of sub-universes', () => {
+  const files = (connections: string) => ({
+    'root.yml': `id: root
+name: Root
+nodes:
+  - { id: ci, name: CI, icon: x }
+  - { id: org, name: Org, icon: x, universe: org.yml }
+connections:
+${connections}`,
+    'org.yml': `id: org
+name: Org
+groups: [{ id: tools, name: Tools }, { id: api, name: API group }]
+nodes:
+  - { id: api, name: API, icon: x, group: tools }
+  - { id: crm, name: CRM, icon: x, group: api }
+`,
+  })
+
+  it('resolves a path ending on a group: a node first, then a group', async () => {
+    const dir = await project(
+      files(`  - { from: ci, to: org/tools, label: deploy }
+  - { from: { group: org/api, side: bottom }, to: ci }
+  - { from: ci, to: org/api }
+`),
+    )
+    const result = await loadArchitecture(path.join(dir, 'root.yml'))
+    if (!result.ok) throw new Error(result.errors.map(formatConfigError).join('\n'))
+    expect(result.architecture.universes['root']!.edges).toEqual([
+      { id: 'e0', from: 'ci', to: 'org', toPath: ['tools'], toPathGroup: true, label: 'deploy' },
+      { id: 'e1', from: 'org', fromPath: ['api'], fromPathGroup: true, to: 'ci', fromSide: 'bottom' },
+      // A plain id names the node `api` (a group shares its id).
+      { id: 'e2', from: 'ci', to: 'org', toPath: ['api'] },
+    ])
+  })
+
+  it('reports an unknown group or node at the end of a path', async () => {
+    const dir = await project(
+      files(`  - { from: ci, to: org/nope }
+  - { from: ci, to: { group: org/crm } }
+  - { from: ci, to: { node: org/tools } }
+`),
+    )
+    const result = await loadArchitecture(path.join(dir, 'root.yml'))
+    expect(result.ok).toBe(false)
+    expect(result.errors.map((e) => [e.field, e.message])).toEqual([
+      ['connections[0].to', 'Unknown node or group "nope" in universe "org" ("org/nope")'],
+      ['connections[1].to', 'Unknown group "crm" in universe "org" ("org/crm")'],
+      ['connections[2].to', 'Unknown node "tools" in universe "org" ("org/tools")'],
     ])
   })
 })

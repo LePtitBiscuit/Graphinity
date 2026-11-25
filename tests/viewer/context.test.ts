@@ -159,6 +159,27 @@ describe('universeContext', () => {
     expect(edges).toEqual([{ id: 'ctx:1:e0', from: 'portal:1:group:backups', to: 'db' }])
   })
 
+  it('attaches a connection from higher up to the frame of a group of the sub-universe', () => {
+    const arch = architecture([
+      { from: 'github', to: 'org', toPath: ['vps', 'edge'], toPathGroup: true, label: 'deploy' },
+      { from: 'org', fromPath: ['tools'], fromPathGroup: true, to: 'mail', fromSide: 'bottom' },
+    ])
+    arch.universes['org']!.groups = [{ id: 'tools', name: 'Tools' }]
+    arch.universes['vps']!.groups = [{ id: 'edge', name: 'Edge' }]
+    // In org: on the frame of the group `tools`; to `vps`, the node that holds the group `edge`.
+    const org = universeContext(arch, at('root', 'org'))
+    expect(org.edges).toEqual([
+      { id: 'ctx:0:e0', from: 'portal:0:github', to: 'vps', label: 'deploy' },
+      { id: 'ctx:0:e1', from: 'tools', fromGroup: true, to: 'portal:0:mail', fromSide: 'bottom' },
+    ])
+    // In vps: on the frame of the group `edge`.
+    const vps = universeContext(arch, at('root', 'org', 'vps'))
+    expect(vps.edges).toEqual([{ id: 'ctx:0:e0', from: 'portal:0:github', to: 'edge', toGroup: true, label: 'deploy' }])
+    // A group left out (not shown): no connection.
+    arch.universes['vps']!.groups = []
+    expect(universeContext(arch, at('root', 'org', 'vps')).edges).toEqual([])
+  })
+
   it('lists the groups a node is connected to in its details', () => {
     const arch = architecture([])
     const org = arch.universes['org']!

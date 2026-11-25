@@ -19,7 +19,7 @@ Universe                     a file
 | [Universe background](/config/universe#background) | `image`, `color`, `blur`, `grid` |
 | [Node](/config/node) | `id`, `name`, `icon`, `description`, `universe`, `group`, `tags`, `color`, `border`, `background`, `size`, `place`, `after`, `beside` |
 | [Connection](/config/connection) | `from`, `to`, `label`, `color`, `style`, `arrow`, `align` |
-| [Connection end](/config/connection#ends-and-sides) | a node or group id, or a node path, or `node` or `group`, `side` |
+| [Connection end](/config/connection#ends-and-sides) | a node or group id, or a path to a node or group of a sub-universe, or `node` or `group`, `side` |
 | [Group](/config/group) | `id`, `name`, `icon`, `color`, `border`, `blur`, `group`, `background` |
 | [Tag](/config/tags) | a text or a number, or `text`, `corner` |
 

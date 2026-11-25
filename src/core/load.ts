@@ -356,44 +356,61 @@ function checkCycles(rootPath: string, loaded: Map<string, LoadedUniverse>, erro
 
 /**
  * Checks the ends that reach into sub-universes (`checkout/api`): every step must follow a link that
- * was kept (not missing, circular or to an excluded universe), and name a node shown there. A
- * connection with an unreachable end is left out.
+ * was kept (not missing, circular or to an excluded universe), and name a node shown there; the
+ * last id may name a group of the universe reached instead (`integrations/business`), marked
+ * `fromPathGroup` / `toPathGroup`. A connection with an unreachable end is left out.
  */
 function resolveDeepEnds(loaded: Map<string, LoadedUniverse>, errors: ConfigError[]): void {
   for (const entry of loaded.values()) {
     if (entry.excluded) continue
     entry.raw.edges = entry.raw.edges.filter((edge) => {
-      for (const [key, first, inner] of [
-        ['from', edge.from, edge.fromPath],
-        ['to', edge.to, edge.toPath],
+      for (const [key, first, inner, wanted] of [
+        ['from', edge.from, edge.fromPath, edge.fromPathEnd],
+        ['to', edge.to, edge.toPath, edge.toPathEnd],
       ] as const) {
         if (!inner) continue
-        const problem = reach(loaded, entry, first, inner)
+        const { problem, group } = reach(loaded, entry, first, inner, wanted)
         if (problem) {
           const field = ['connections', edge.index, key]
           errors.push(makeError(entry.file, `${problem} ("${[first, ...inner].join('/')}")`, field, entry.config))
           return false
         }
+        if (group) edge[key === 'from' ? 'fromPathGroup' : 'toPathGroup'] = true
       }
       return true
     })
   }
 }
 
-/** Why `first/inner…` cannot be reached from `entry`, or `undefined` when it can. */
-function reach(loaded: Map<string, LoadedUniverse>, entry: LoadedUniverse, first: string, inner: readonly string[]): string | undefined {
+/**
+ * Whether `first/inner…` can be reached from `entry` (`problem` says why not), and whether its last
+ * id is a group. `wanted`: what that last id must be (absent: a node, or else a group).
+ */
+function reach(
+  loaded: Map<string, LoadedUniverse>,
+  entry: LoadedUniverse,
+  first: string,
+  inner: readonly string[],
+  wanted: 'node' | 'group' | undefined,
+): { problem?: string; group?: true } {
   let universe = entry
   let opener = first
-  for (const id of inner) {
+  for (const [step, id] of inner.entries()) {
     const index = universe.nodes.findIndex((node) => node?.id === opener)
     const file = index === -1 ? undefined : universe.links.get(index)
     const next = file === undefined ? undefined : loaded.get(file)
-    if (!next || next.excluded) return `The universe of "${opener}" is not available`
-    if (!next.nodes.some((node) => node?.id === id)) return `Unknown node "${id}" in universe "${next.id}"`
+    if (!next || next.excluded) return { problem: `The universe of "${opener}" is not available` }
+    const isNode = next.nodes.some((node) => node?.id === id)
+    if (step === inner.length - 1 && wanted !== 'node' && (wanted === 'group' || !isNode)) {
+      // The end: a group of that universe (a shown one: with nodes and a valid name).
+      if (next.groups.some((group) => group?.id === id)) return { group: true }
+      return { problem: wanted === 'group' ? `Unknown group "${id}" in universe "${next.id}"` : `Unknown node or group "${id}" in universe "${next.id}"` }
+    }
+    if (!isNode) return { problem: `Unknown node "${id}" in universe "${next.id}"` }
     universe = next
     opener = id
   }
-  return undefined
+  return {}
 }
 
 /** The architecture made of everything valid; `undefined` when the root universe cannot be shown. */
@@ -456,7 +473,7 @@ function normalize(rootPath: string, loaded: Map<string, LoadedUniverse>): Archi
           },
         ]
       }),
-      edges: raw.edges.map(({ index: _, ...edge }, index) => ({ id: `e${index}`, ...edge })),
+      edges: raw.edges.map(({ index: _, fromPathEnd: _f, toPathEnd: _t, ...edge }, index) => ({ id: `e${index}`, ...edge })),
     }
   }
   return { root: root.id, universes }

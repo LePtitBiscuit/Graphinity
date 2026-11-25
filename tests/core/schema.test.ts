@@ -416,7 +416,7 @@ describe('validateUniverse - connections, sides, sizes, backgrounds and blur', (
       }),
     ).toEqual([
       { from: 'a', to: 'vps', toPath: ['api'] },
-      { from: 'vps', to: 'a', fromPath: ['redis', 'inner'], fromSide: 'right' },
+      { from: 'vps', to: 'a', fromPath: ['redis', 'inner'], fromPathEnd: 'node', fromSide: 'right' },
     ])
     expect(
       issuesOf({
