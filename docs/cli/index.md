@@ -46,7 +46,7 @@ An option given to a command it does not apply to is a usage error:
 `graphinity --help` (or `-h`) prints the general help:
 
 ```
-Graphinity 0.1.2 - Interactive nested architecture diagrams
+Graphinity 0.1.3 - Interactive nested architecture diagrams
 
 Usage: graphinity <command> [options]
 
@@ -76,7 +76,7 @@ options, examples, exit codes and the link to its page of this documentation. Fo
 `graphinity dev --help`:
 
 ```
-Graphinity 0.1.2 - Interactive nested architecture diagrams
+Graphinity 0.1.3 - Interactive nested architecture diagrams
 
 Usage: graphinity dev <file> [options]
 
@@ -114,7 +114,7 @@ Outside a terminal (a pipe, a log), the logo is left out:
   G R A P H I N I T Y
   Interactive nested architecture diagrams
 
-  Version: 0.1.2
+  Version: 0.1.3
 
   Commands:
     init       Initialize a new Graphinity project
@@ -132,7 +132,7 @@ Outside a terminal (a pipe, a log), the logo is left out:
     https://leptitbiscuit.github.io/Graphinity/
 ```
 
-`graphinity --version` (or `-v`) prints the version alone (`0.1.2`).
+`graphinity --version` (or `-v`) prints the version alone (`0.1.3`).
 
 ## The project directory
 

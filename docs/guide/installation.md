@@ -64,7 +64,7 @@ npx graphinity --help
 prints:
 
 ```
-Graphinity 0.1.2 - Interactive nested architecture diagrams
+Graphinity 0.1.3 - Interactive nested architecture diagrams
 
 Usage: graphinity <command> [options]
 
