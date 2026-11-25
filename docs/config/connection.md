@@ -212,7 +212,7 @@ draws it on the end itself, with a door for the other end. See
   (`Unknown node or group "apii" in universe "checkout" ("checkout/apii")`). Otherwise the
   connection is not drawn.
 - A connection from a node to the inside of its own universe (`checkout → checkout/api`) is only drawn
-  inside.
+  inside, from (or to) a door for that node.
 
 ### A group of a sub-universe
 

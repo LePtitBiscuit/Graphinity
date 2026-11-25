@@ -88,8 +88,19 @@ export function universeContext(architecture: Architecture, path: NavigationPath
   for (let level = 0; level < depth; level++) {
     for (const edge of universes[level]!.edges) {
       // A group is in the universe that declares it, never on the way down: always a door.
-      const from: End = edge.fromGroup ? { kind: 'external', level, node: edge.from, group: true } : classify([edge.from, ...(edge.fromPath ?? [])], level, edge.fromPathGroup)
-      const to: End = edge.toGroup ? { kind: 'external', level, node: edge.to, group: true } : classify([edge.to, ...(edge.toPath ?? [])], level, edge.toPathGroup)
+      // `vps → vps/api`, a node connected to the inside of its own universe (not drawn up there):
+      // inside, the node itself is a door.
+      const loop = isInnerLoop(edge) && (edge.fromPath === undefined) !== (edge.toPath === undefined)
+      const from: End = edge.fromGroup
+        ? { kind: 'external', level, node: edge.from, group: true }
+        : loop && !edge.fromPath
+          ? { kind: 'external', level, node: edge.from }
+          : classify([edge.from, ...(edge.fromPath ?? [])], level, edge.fromPathGroup)
+      const to: End = edge.toGroup
+        ? { kind: 'external', level, node: edge.to, group: true }
+        : loop && !edge.toPath
+          ? { kind: 'external', level, node: edge.to }
+          : classify([edge.to, ...(edge.toPath ?? [])], level, edge.toPathGroup)
       const {
         id: _id,
         from: _f,
@@ -147,7 +158,8 @@ export function universeContext(architecture: Architecture, path: NavigationPath
 
 /**
  * The connections a universe draws itself: a connection from a node to the inside of its own
- * sub-universe (`vps → vps/api`) is not drawn as a loop, only inside.
+ * sub-universe (`vps → vps/api`) is not drawn as a loop, only inside (from a door for that node,
+ * see `universeContext`).
  */
 export function drawnEdges(universe: Universe): ArchitectureEdge[] {
   return universe.edges.filter((edge) => !isInnerLoop(edge))

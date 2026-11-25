@@ -159,6 +159,26 @@ describe('universeContext', () => {
     expect(edges).toEqual([{ id: 'ctx:1:e0', from: 'portal:1:group:backups', to: 'db' }])
   })
 
+  it('draws a connection from a node to the inside of its own universe inside, from a door for that node', () => {
+    const arch = architecture([], [
+      { from: 'vps', to: 'vps', toPath: ['api'], label: 'health' },
+      { from: 'vps', fromPath: ['db'], to: 'vps', toSide: 'top' },
+    ])
+    // Not drawn in org (a loop on vps)...
+    expect(drawnEdges(arch.universes['org']!)).toEqual([])
+    // ...but inside vps, from (and to) the door for vps.
+    const { portals, edges } = universeContext(arch, at('root', 'org', 'vps'))
+    expect(portals.map((p) => [p.id, p.role])).toEqual([['portal:1:vps', 'in']])
+    expect(edges).toEqual([
+      { id: 'ctx:1:e0', from: 'portal:1:vps', to: 'api', label: 'health' },
+      { id: 'ctx:1:e1', from: 'db', to: 'portal:1:vps' },
+    ])
+    // Two levels down, from the root: the same, with the door for org.
+    const deep = architecture([{ from: 'org', to: 'org', toPath: ['vps', 'api'] }])
+    expect(universeContext(deep, at('root', 'org', 'vps')).edges).toEqual([{ id: 'ctx:0:e0', from: 'portal:0:org', to: 'api' }])
+    expect(universeContext(deep, at('root', 'org')).edges).toEqual([{ id: 'ctx:0:e0', from: 'portal:0:org', to: 'vps' }])
+  })
+
   it('attaches a connection from higher up to the frame of a group of the sub-universe', () => {
     const arch = architecture([
       { from: 'github', to: 'org', toPath: ['vps', 'edge'], toPathGroup: true, label: 'deploy' },

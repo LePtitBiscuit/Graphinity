@@ -66,6 +66,8 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
   a path ending on a group (`toPathGroup`) is drawn on the node that leads to it, and in the
   universe that holds the group on its frame (`classify(..., group)`: the context edge gets
   `toGroup`); `connectionsOf` lists a group end with `group: true`.
+  A connection from a node to the inside of its own universe (`isInnerLoop`) is not drawn there,
+  only inside, from a door for that node.
 - **Connection anchors**: a single connection on a side of a node attaches in the middle of the
   tile side; when a side carries several connections, each end gets its own ELK port, spread
   evenly along the tile (second ELK pass, `spreadPorts()`, `portPosition()`, `DEFAULT_SIDES` in
