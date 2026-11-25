@@ -282,6 +282,30 @@ describe('layoutUniverse', async () => {
     expect(plainAlong('c')).toBeGreaterThan(plainAlong('b'))
   })
 
+  it('keeps aligned nodes facing each other in a layer widened by a group', async () => {
+    const node = (id: string, extra: object = {}) => ({ id, name: id, icon: { type: 'name' as const, name: 'x' }, ...extra })
+    const universe: Universe = {
+      id: 'u',
+      name: 'U',
+      direction: 'right',
+      source: 'u.yml',
+      groups: [{ id: 'pool', name: 'Pool' }],
+      nodes: [node('door', { size: 'large' }), node('worker'), node('cache'), node('queue', { group: 'pool' })],
+      edges: [
+        { id: 'e0', from: 'worker', to: 'cache', label: 'warm', align: true },
+        { id: 'e1', from: 'door', to: 'worker', label: 'deploy' },
+        { id: 'e2', from: 'door', to: 'pool', toGroup: true },
+      ],
+    }
+    const layout = await layoutUniverse(universe, measure, { first: new Set(['door']) })
+    checkLayout(layout, 'right')
+    const x = (id: string) => layout.nodes.find((n) => n.node.id === id)!.x
+    expect(x('cache')).toBe(x('worker'))
+    const points = layout.edges.find((e) => e.id === 'e0')!.points
+    expect(points).toHaveLength(2)
+    expect(points[0]!.x).toBe(points[1]!.x)
+  })
+
   it('replaces a detour around a group by a direct route', async () => {
     // The group holds a target of the hub (obs) and a source of it (reg): ELK keeps the group in
     // one layer, so reg → hub goes against the flow and around the diagram.

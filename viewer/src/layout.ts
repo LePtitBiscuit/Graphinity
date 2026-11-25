@@ -544,6 +544,9 @@ export async function layoutUniverse(universe: Universe, measureText: MeasureTex
         height,
         layoutOptions: {
           'elk.portConstraints': 'FIXED_POS',
+          // Layers chosen here: nodes centered in their layer, so that nodes side by side face each
+          // other (a wider group in the layer would put some of them against its border).
+          ...(shared && { 'elk.alignment': 'CENTER' }),
           ...(layer && { 'elk.layered.layering.layerConstraint': layer }),
         },
         ports,
