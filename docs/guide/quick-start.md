@@ -130,7 +130,7 @@ npx graphinity dev architecture.yml
 ```
 10:42:07 ✓ 2 universes, 5 nodes, 3 connections
 
-  Graphinity 0.1.3  http://127.0.0.1:4321/
+  Graphinity 0.1.4  http://127.0.0.1:4321/
   Watching architecture.yml and the files it references. Ctrl+C to stop.
 ```
 
