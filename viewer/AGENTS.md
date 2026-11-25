@@ -65,7 +65,8 @@ in `GRAPHINITY_FILE`, on the port in `GRAPHINITY_PORT` (strict) or from 5173 upw
   `context.ts` shows an ancestor's group as a door (`portal:<level>:group:<id>`, `Portal.group`);
   a path ending on a group (`toPathGroup`) is drawn on the node that leads to it, and in the
   universe that holds the group on its frame (`classify(..., group)`: the context edge gets
-  `toGroup`); `connectionsOf` lists a group end with `group: true`.
+  `toGroup`); `connectionsOf` lists a group end with `group: true`, and, given the architecture,
+  the names along a path end (`Connection.inside`, shown `Integrations › Business` in the details).
   A connection from a node to the inside of its own universe (`isInnerLoop`) is not drawn there,
   only inside, from a door for that node.
 - **Connection anchors**: a single connection on a side of a node attaches in the middle of the

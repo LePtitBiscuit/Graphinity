@@ -200,6 +200,21 @@ describe('universeContext', () => {
     expect(universeContext(arch, at('root', 'org', 'vps')).edges).toEqual([])
   })
 
+  it('names the end of a path into a sub-universe in the details: a node, or a group', () => {
+    const arch = architecture([
+      { from: 'github', to: 'org', toPath: ['vps', 'api'], label: 'deploy' },
+      { from: 'org', fromPath: ['tools'], fromPathGroup: true, to: 'mail' },
+    ])
+    arch.universes['org']!.groups = [{ id: 'tools', name: 'Tool chain' }]
+    const root = arch.universes['root']!
+    expect(connectionsOf(root, 'github', undefined, arch)).toEqual([
+      { edgeId: 'e0', direction: 'out', node: root.nodes[1], label: 'deploy', inside: ['VPS', 'API'] },
+    ])
+    expect(connectionsOf(root, 'mail', undefined, arch)).toEqual([{ edgeId: 'e1', direction: 'in', node: root.nodes[1], inside: ['Tool chain'] }])
+    // Without the architecture, only the node that holds the end.
+    expect(connectionsOf(root, 'mail')).toEqual([{ edgeId: 'e1', direction: 'in', node: root.nodes[1] }])
+  })
+
   it('lists the groups a node is connected to in its details', () => {
     const arch = architecture([])
     const org = arch.universes['org']!

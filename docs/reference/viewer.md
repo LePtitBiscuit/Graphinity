@@ -30,7 +30,7 @@ The viewer is a Vue 3 application built with [Vue Flow](https://vueflow.dev) and
 | Type in the search field (`/` or `Ctrl K` / `⌘K` to reach it) | Lists the nodes and groups whose name matches; choosing one goes to it (see [Search](#search)). |
 | Double-click a doubled node | Opens its universe. |
 | *Open* in the details panel | Same as the double-click. |
-| Click a connection in the details | Selects the node at the other end, or, when that end is a node of a parent universe, goes back there. A group at the other end is listed as `Name (group)`, without a link. |
+| Click a connection in the details | Selects the node at the other end, or, when that end is a node of a parent universe, goes back there. A group at the other end is listed as `Name (group)`, without a link. An end inside a sub-universe (a path) is listed with the names along the path: `Integrations › Business services`; clicking it selects the node that holds it. |
 | Breadcrumb (top left) | Goes back to any parent level. |
 | Back button | Goes up one level (disabled at the root). |
 | `Esc`, click on the canvas or a group | Closes the details panel. |

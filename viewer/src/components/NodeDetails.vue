@@ -19,7 +19,7 @@ const logo = computed(() => (props.node.icon?.type === 'name' ? props.icons[prop
 const target = computed(() =>
   props.node.universe === undefined ? undefined : universeAt(props.architecture, props.node.universe),
 )
-const connections = computed(() => connectionsOf(props.universe, props.node.id, props.context))
+const connections = computed(() => connectionsOf(props.universe, props.node.id, props.context, props.architecture))
 const group = computed(() => props.universe.groups.find((g) => g.id === props.node.group))
 const iconText = computed(() => {
   const { icon } = props.node
@@ -69,7 +69,9 @@ const iconText = computed(() => {
             {{ connection.node.name }} <span class="label">({{ connection.external.universe }})</span>
           </button>
           <span v-else-if="connection.group" class="group-end">{{ connection.node.name }} <span class="label">(group)</span></span>
-          <button v-else type="button" class="link" @click="$emit('select', connection.node.id)">{{ connection.node.name }}</button>
+          <button v-else type="button" class="link" @click="$emit('select', connection.node.id)">
+            {{ connection.node.name }}<span v-for="(name, index) in connection.inside" :key="index" class="inside"> › {{ name }}</span>
+          </button>
           <span v-if="connection.label" class="label">{{ connection.label }}</span>
         </li>
       </ul>

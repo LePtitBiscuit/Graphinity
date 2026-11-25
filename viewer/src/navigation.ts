@@ -113,13 +113,38 @@ export interface Connection {
   label?: string
   /** The other end is a node of another universe (a door): its universe and breadcrumb level. */
   external?: { universe: string; level: number }
+  /**
+   * The other end is inside the universe of `node` (a path, `integrations/business`): the names
+   * along that path, the last one a node or a group (`["Business services"]`).
+   */
+  inside?: string[]
+}
+
+/** The names along `path` inside the universe opened by `node` (a node, or a group at the end). */
+function namesInside(architecture: Architecture, node: ArchitectureNode, path: readonly string[], group: boolean): string[] | undefined {
+  const names: string[] = []
+  let universe = node.universe === undefined ? undefined : universeAt(architecture, node.universe)
+  for (const [index, id] of path.entries()) {
+    if (!universe) return undefined
+    if (group && index === path.length - 1) {
+      const found = universe.groups.find((g) => g.id === id)
+      if (!found) return undefined
+      names.push(found.name)
+      break
+    }
+    const inner = universe.nodes.find((n) => n.id === id)
+    if (!inner) return undefined
+    names.push(inner.name)
+    universe = inner.universe === undefined ? undefined : universeAt(architecture, inner.universe)
+  }
+  return names
 }
 
 /**
  * Incoming and outgoing connections of a node within its universe, including those declared by
  * the ancestors (`context`): to other nodes or groups of the universe, or to doors.
  */
-export function connectionsOf(universe: Universe, nodeId: string, context?: UniverseContext): Connection[] {
+export function connectionsOf(universe: Universe, nodeId: string, context?: UniverseContext, architecture?: Architecture): Connection[] {
   const byId = new Map(universe.nodes.map((node) => [node.id, node]))
   const groups = new Map(universe.groups.map((group) => [group.id, group]))
   const doors = new Map((context?.portals ?? []).flatMap((p) => (p.node ? [[p.id, p] as const] : [])))
@@ -130,9 +155,9 @@ export function connectionsOf(universe: Universe, nodeId: string, context?: Univ
     ...(context?.edges ?? []),
   ]
   for (const edge of edges) {
-    for (const [direction, self, selfIsGroup, other, otherIsGroup] of [
-      ['out', edge.from, edge.fromGroup, edge.to, edge.toGroup],
-      ['in', edge.to, edge.toGroup, edge.from, edge.fromGroup],
+    for (const [direction, self, selfIsGroup, other, otherIsGroup, otherPath, otherPathGroup] of [
+      ['out', edge.from, edge.fromGroup, edge.to, edge.toGroup, edge.toPath, edge.toPathGroup],
+      ['in', edge.to, edge.toGroup, edge.from, edge.fromGroup, edge.fromPath, edge.fromPathGroup],
     ] as const) {
       if (self !== nodeId || selfIsGroup) continue
       const door = otherIsGroup ? undefined : doors.get(other)
@@ -141,6 +166,7 @@ export function connectionsOf(universe: Universe, nodeId: string, context?: Univ
       if (!node) continue
       // A self-loop is listed once.
       if (direction === 'in' && edge.from === edge.to && !edge.fromGroup && !edge.toGroup) continue
+      const inside = architecture && otherPath && !group && !door ? namesInside(architecture, node, otherPath, otherPathGroup === true) : undefined
       connections.push({
         edgeId: edge.id,
         direction,
@@ -148,6 +174,7 @@ export function connectionsOf(universe: Universe, nodeId: string, context?: Univ
         ...(group && { group: true as const }),
         ...(edge.label !== undefined && { label: edge.label }),
         ...(door && { external: { universe: door.universe.name, level: door.level } }),
+        ...(inside && { inside }),
       })
     }
   }
